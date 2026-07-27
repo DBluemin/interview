@@ -1,0 +1,1766 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interview-Instrument · To Trust the Machine?</title>
+
+<style>
+  :root{
+    --paper:#F5F7F8; --surface:#FFFFFF;
+    --ink:#101820; --muted:#5B6874; --faint:#8A97A3; --rule:#DCE2E7;
+    --signal:#1B3A6B; --soft:#E8EDF5;
+    --live:#A66A00; --over:#9E2A1C; --ok:#1F6B4A;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono","IBM Plex Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;font-size:inherit;cursor:pointer}
+  textarea,input{font-family:inherit;font-size:inherit;color:inherit}
+  h1{font-size:25px;font-weight:640;letter-spacing:-0.022em;margin:2px 0 6px;line-height:1.2}
+  h2{font-size:19px;font-weight:620;letter-spacing:-0.02em;margin:0 0 4px}
+
+  .bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;padding:9px 18px;background:var(--surface);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column;line-height:1.25}
+  .brand b{font-size:13px;font-weight:650;letter-spacing:-0.01em}
+  .brand span{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.09em;text-transform:uppercase}
+  .spacer{flex:1}
+
+  .clock{font-family:var(--mono);font-size:25px;font-weight:500;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;min-width:98px}
+  .clock.is-live{color:var(--live)} .clock.is-over{color:var(--over)}
+
+  .btn{background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:5px;padding:6px 12px;font-size:13px;font-weight:500;transition:border-color .12s,background .12s}
+  .btn:hover{border-color:var(--faint)}
+  .btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+  .btn-primary{background:var(--signal);border-color:var(--signal);color:#fff}
+  .btn-primary:hover{background:#16305A;border-color:#16305A}
+  .btn-quiet{border-color:transparent;color:var(--muted)}
+  .btn-quiet:hover{border-color:var(--rule);color:var(--ink)}
+  .btn-danger{color:var(--over);border-color:#EBD2CE}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .code-input{font-family:var(--mono);font-size:14px;font-weight:600;width:62px;text-align:center;border:1px solid var(--rule);border-radius:5px;padding:6px 4px;background:var(--paper)}
+  .tabs{display:flex;gap:3px;background:var(--paper);padding:3px;border-radius:6px}
+  .tab{border:none;background:transparent;padding:6px 12px;border-radius:4px;font-size:13px;font-weight:500;color:var(--muted)}
+  .tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(16,24,32,.09)}
+
+  .save{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:none}
+  .save.on .dot{background:var(--ok)} .save.on{color:var(--ok)}
+  .save.busy .dot{background:var(--live)} .save.busy{color:var(--live)}
+  .save.off .dot{background:var(--over)} .save.off{color:var(--over)}
+
+  .wrap{display:grid;grid-template-columns:126px minmax(0,1fr);max-width:1160px;margin:0 auto}
+  .view{padding:28px 24px 110px}
+  .view[hidden]{display:none}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--signal);font-weight:600}
+  .srq{font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:24px}
+  .lede{color:var(--muted);font-size:14px;margin:0 0 22px;max-width:62ch}
+
+  .gutter{position:sticky;top:55px;align-self:start;height:calc(100vh - 55px);padding:28px 0 28px 18px;border-right:1px solid var(--rule)}
+  .rail{position:relative;height:100%;max-height:620px}
+  .seg{position:absolute;left:0;right:12px;border-left:2px solid var(--rule);padding-left:9px;display:flex;flex-direction:column;background:none;text-align:left;border-top:none;border-right:none;border-bottom:none;color:var(--muted)}
+  .seg:hover{border-left-color:var(--faint)}
+  .seg[aria-current="true"]{border-left-color:var(--signal);color:var(--ink)}
+  .seg-k{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em}
+  .seg-t{font-family:var(--mono);font-size:9.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .playhead{position:absolute;left:-4px;right:0;height:0;border-top:1px solid var(--live);pointer-events:none;transition:top .9s linear}
+  .playhead::before{content:"";position:absolute;left:-4px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:var(--live)}
+  .playhead.is-over{border-top-color:var(--over)} .playhead.is-over::before{background:var(--over)}
+
+  .q{border-top:1px solid var(--rule);padding:17px 0 13px}
+  .q:first-of-type{border-top:none}
+  .q-top{display:flex;gap:12px;align-items:baseline}
+  .q-id{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--faint);min-width:32px;padding-top:3px}
+  .q-text{font-size:17px;line-height:1.42;font-weight:480;letter-spacing:-0.011em;flex:1;margin:0}
+  .q.is-key .q-id{color:var(--signal)} .q.is-key .q-text{font-weight:560}
+  .keytag{display:inline-block;vertical-align:2px;margin-left:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;background:var(--soft);color:var(--signal);padding:2px 6px;border-radius:3px;font-weight:600}
+  .probe{margin:8px 0 0 44px;padding-left:11px;border-left:1px solid var(--rule);color:var(--muted);font-size:13.5px;font-style:italic}
+  .qopts{display:flex;flex-wrap:wrap;gap:7px;margin:11px 0 0 44px}
+  .qopt{border:1px solid var(--rule);background:var(--surface);border-radius:6px;
+    padding:9px 14px;font-size:14.5px;font-weight:500;transition:border-color .12s,background .12s}
+  .qopt:hover{border-color:var(--signal)}
+  .qopt[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#fff;font-weight:600}
+  .exline{margin:8px 0 0 44px;font-size:13.5px;color:var(--ink);background:var(--soft);
+    border-radius:0 5px 5px 0;border-left:2px solid var(--signal);padding:8px 11px;max-width:66ch}
+  .exline span{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--signal);font-weight:700;display:block;margin-bottom:2px}
+  .brief{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:6px 18px 8px;margin:0 0 26px}
+  .brief p{font-size:14.5px;line-height:1.6;color:var(--muted);margin:12px 0}
+  .brief b{color:var(--ink);font-weight:600}
+  .why{margin:7px 0 0 44px;font-size:12.5px;color:var(--faint);max-width:62ch}
+  .q-tools{display:flex;gap:8px;margin:10px 0 0 44px}
+  .note{flex:1;min-height:38px;resize:vertical;border:1px solid var(--rule);border-radius:5px;padding:8px 10px;background:var(--surface);font-size:14px;line-height:1.5}
+  .note:focus{outline:2px solid var(--signal);outline-offset:-1px;border-color:var(--signal)}
+  .stamp{white-space:nowrap;font-family:var(--mono);font-size:11.5px;padding:8px 10px}
+  .stamps{margin:8px 0 0 44px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;background:var(--soft);color:var(--signal);border:none;border-radius:3px;padding:3px 7px;font-weight:600}
+  .chip:hover{text-decoration:line-through}
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:32px;padding-top:18px;border-top:1px solid var(--rule)}
+
+  .panel{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:18px;margin-bottom:20px}
+  .panel h3{margin:0 0 3px;font-size:15px;font-weight:620;letter-spacing:-0.01em}
+  .panel p{margin:0 0 14px;font-size:13px;color:var(--muted)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:22px}
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--rule)}
+  th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;width:58px}
+  .bar-cell{position:relative}
+  .bar-fill{position:absolute;left:0;top:3px;bottom:3px;background:var(--soft);border-radius:2px;z-index:0;transition:width .4s}
+  .bar-cell span{position:relative;z-index:1}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .field input{border:1px solid var(--rule);border-radius:5px;padding:7px 9px;background:var(--surface)}
+  .warn{border-left:3px solid var(--live);background:#FFF9EF;padding:12px 14px;border-radius:0 6px 6px 0;font-size:13px;color:#6B4A0F;margin-bottom:20px}
+  .warn b{font-weight:640}
+  .warn.bad{border-left-color:var(--over);background:#FDF3F1;color:#6E2118}
+  .warn.good{border-left-color:var(--ok);background:#F0F7F3;color:#1B5238}
+
+  .roomcode{font-family:var(--mono);font-size:clamp(48px,11vw,104px);font-weight:700;letter-spacing:.14em;line-height:1;color:var(--signal);margin:6px 0 4px}
+  .roomhint{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  .joined{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+  .pill{font-family:var(--mono);font-size:11.5px;font-weight:600;border:1px solid var(--rule);border-radius:20px;padding:4px 11px;color:var(--muted)}
+  .pill.done{border-color:var(--ok);color:var(--ok);background:#F0F7F3}
+
+  .split{margin-bottom:16px}
+  .split-h{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:5px;gap:12px}
+  .split-h b{font-weight:560}
+  .split-bar{display:flex;height:32px;border-radius:5px;overflow:hidden;background:var(--paper);border:1px solid var(--rule)}
+  .split-a,.split-b{display:flex;align-items:center;font-family:var(--mono);font-size:12px;font-weight:700;transition:width .5s}
+  .split-a{background:var(--signal);color:#fff;justify-content:flex-start;padding-left:9px}
+  .split-b{background:var(--soft);color:var(--signal);justify-content:flex-end;padding-right:9px}
+
+  .ex{max-width:780px;margin:0 auto}
+  .pair{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:16px 18px;margin-bottom:12px}
+  .pair-q{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.06em;margin-bottom:11px}
+  .pair-opts{display:grid;grid-template-columns:1fr 30px 1fr;gap:8px}
+  .opt{border:1px solid var(--rule);border-radius:6px;background:var(--paper);padding:15px 16px;font-size:16px;font-weight:490;line-height:1.35;text-align:left;transition:border-color .12s,background .12s}
+  .opt:hover{border-color:var(--signal);background:var(--surface)}
+  .opt[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#fff;font-weight:560}
+  .vs{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .cards{list-style:none;margin:0;padding:0}
+  .card{display:flex;align-items:center;gap:11px;border:1px solid var(--rule);border-radius:6px;background:var(--surface);padding:11px 13px;margin-bottom:7px;transition:border-color .12s,box-shadow .12s}
+  .card.dragging{opacity:.35}
+  .card.over{border-color:var(--signal);box-shadow:0 0 0 2px var(--soft)}
+  .card.top3{border-color:var(--signal)}
+  .card.top3 .rank{background:var(--signal);color:#fff}
+  .rank{font-family:var(--mono);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;background:var(--paper);color:var(--muted);width:26px;height:26px;flex:none;border-radius:4px;display:flex;align-items:center;justify-content:center}
+  .card-label{flex:1;font-size:15.5px;line-height:1.3}
+  .grip{cursor:grab;color:var(--faint);font-family:var(--mono);font-size:13px;user-select:none}
+  .move{border:1px solid var(--rule);background:var(--surface);border-radius:4px;width:30px;height:28px;line-height:1;padding:0;color:var(--muted)}
+  .move:hover{border-color:var(--signal);color:var(--signal)}
+  .final{margin-top:24px;border-top:1px solid var(--rule);padding-top:18px}
+
+  .scene{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;font-size:15.5px;line-height:1.5;margin:0 0 20px;color:var(--ink)}
+  .scene{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;font-size:15.5px;line-height:1.5;margin:0 0 20px;color:var(--ink)}
+  .pstage{max-width:600px;margin:0 auto;padding:34px 20px 90px}
+  .pstage .opt{padding:22px 20px;font-size:19px;margin-bottom:10px;width:100%}
+  .pq{font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.3;margin:0 0 22px}
+  .dots{display:flex;gap:6px;margin-bottom:26px}
+  .pdot{width:26px;height:3px;border-radius:2px;background:var(--rule)}
+  .pdot.on{background:var(--signal)}
+  .pdot.now{background:var(--live)}
+  .bigcode{font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:.22em;text-align:center;text-transform:uppercase;width:100%;border:1px solid var(--rule);border-radius:8px;padding:16px 10px;background:var(--surface)}
+  .bigcode:focus{outline:2px solid var(--signal);outline-offset:1px}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:6px;font-size:13.5px;z-index:99;opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+  .foot{max-width:74ch;margin:0 auto;padding:0 24px 56px;font-size:12px;color:var(--faint)}
+
+  @media (max-width:820px){
+    .wrap{grid-template-columns:1fr}
+    .gutter{display:none}
+    .q-tools,.probe,.why,.stamps{margin-left:0}
+    .pair-opts{grid-template-columns:1fr;gap:6px} .vs{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+
+<div class="bar" id="topbar">
+  <div class="brand"><b>To Trust the Machine?</b><span id="modeLabel">Moderation</span></div>
+  <span id="modChrome" style="display:none;align-items:center;gap:16px"><input class="code-input" id="pcode" value="I1" maxlength="4" aria-label="Teilnehmercode">
+  <div class="clock" id="clock">00:00</div>
+  <button class="btn" id="toggleTimer">Start</button>
+  <button class="btn btn-quiet" id="resetTimer">Zurück</button>
+  </span><div class="spacer"></div><span id="modChrome2" style="display:none;align-items:center;gap:16px">
+  <div class="save" id="saveState"><span class="dot"></span><span id="saveText">–</span></div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="session">Leitfaden</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="room">Live-Raum</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="rank">Abwägung</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="transcript">Transkript</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="data">Daten</button>
+  </div>
+  </span><button class="btn btn-quiet" id="switchBtn">•••</button>
+  <button class="btn btn-quiet" id="langBtn">EN</button>
+</div>
+
+<div class="wrap" id="modWrap">
+  <nav class="gutter" aria-label="Zeitbudget"><div class="rail" id="rail"></div></nav>
+  <div>
+    <section class="view" id="view-session"></section>
+    <section class="view" id="view-room" hidden></section>
+    <section class="view" id="view-rank" hidden>
+      <div class="ex">
+        <p class="eyebrow">Block E · SRQ5</p>
+        <h1 id="exTitle">Abwägung</h1>
+        <p class="lede" id="exLede"></p>
+        <div id="pairs"></div>
+        <div class="final"><h2 id="sortTitle"></h2><p class="lede" id="sortLede"></p><ul class="cards" id="cards"></ul></div>
+        <div class="final"><h2 id="anchorTitle"></h2><p class="lede" id="anchorLede"></p>
+          <textarea class="note" id="anchorNote" style="min-height:90px;width:100%"></textarea>
+          <div id="partExtra"></div></div>
+        <div class="final" id="cmpBox"></div>
+      </div>
+    </section>
+    <section class="view" id="view-transcript" hidden></section>
+    <section class="view" id="view-data" hidden></section>
+  </div>
+</div>
+
+<div id="lockWrap" hidden></div>
+<div id="partWrap" hidden></div>
+<p class="foot" id="footNote"></p>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ═══ 1 · Speicherschicht ═══════════════════════════════════
+   cloud  – window.storage, geteilte Schlüssel → Live-Raum möglich
+   local  – localStorage, nur dieses Gerät → kein Live-Raum
+   memory – überlebt keinen Neuladen → Export erzwingen
+   ═══════════════════════════════════════════════════════════ */
+const DB = (()=>{
+  let kind="memory"; const mem=new Map();
+  const mk=(k,sh)=>(sh?"S|":"P|")+k;
+  try{
+    if(typeof window.storage==="object" && window.storage && typeof window.storage.set==="function") kind="cloud";
+    else { const t="__ttm_probe"; localStorage.setItem(t,"1"); localStorage.removeItem(t); kind="local"; }
+  }catch(_){ kind="memory"; }
+
+  async function get(key,shared){
+    try{
+      if(kind==="cloud"){ const r=await window.storage.get(key,shared); return r?JSON.parse(r.value):null; }
+      if(kind==="local"){ const v=localStorage.getItem(mk(key,shared)); return v?JSON.parse(v):null; }
+      const v=mem.get(mk(key,shared)); return v!==undefined?JSON.parse(v):null;
+    }catch(_){ return null; }
+  }
+  async function set(key,value,shared){
+    const s=JSON.stringify(value);
+    if(kind==="cloud"){ const r=await window.storage.set(key,s,shared); if(!r) throw new Error("set failed"); return true; }
+    if(kind==="local"){ localStorage.setItem(mk(key,shared),s); return true; }
+    mem.set(mk(key,shared),s); return true;
+  }
+  async function del(key,shared){
+    try{
+      if(kind==="cloud"){ await window.storage.delete(key,shared); return true; }
+      if(kind==="local"){ localStorage.removeItem(mk(key,shared)); return true; }
+      mem.delete(mk(key,shared)); return true;
+    }catch(_){ return false; }
+  }
+  async function list(prefix,shared){
+    try{
+      if(kind==="cloud"){ const r=await window.storage.list(prefix,shared); return r?r.keys:[]; }
+      const src = kind==="local" ? Object.keys(localStorage) : [...mem.keys()];
+      const p=mk(prefix,shared);
+      return src.filter(k=>k.startsWith(p)).map(k=>k.slice(2));
+    }catch(_){ return []; }
+  }
+  return {get,set,del,list, get kind(){return kind}, get canRoom(){return kind==="cloud"}};
+})();
+
+/* ═══ 2 · Inhalte ══════════════════════════════════════════ */
+let BLOCKS=[];
+const VAULT={"v": 1, "salt": "g96JiNpK7IbMay4Ym3LK8w==", "iv": "IzgaGZBr7cFWvvPG", "it": 210000, "ct": "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"};const FACTORS=[
+ {id:"acc",de:"Nachgewiesene Trefferquote des Tools",en:"Proven hit rate of the tool"},
+ {id:"exp",de:"Nachvollziehbare Begründung",en:"Traceable reasoning"},
+ {id:"stk",de:"Tragweite der Entscheidung",en:"Stakes of the decision"},
+ {id:"tim",de:"Zeitdruck",en:"Time pressure"},
+ {id:"lia",de:"Persönliche Haftung für das Ergebnis",en:"Personal liability for the outcome"},
+ {id:"own",de:"Eigene Fachexpertise",en:"Own domain expertise"},
+ {id:"hum",de:"Rat einer menschlichen Fachperson",en:"Advice of a human expert"},
+ {id:"dat",de:"Qualität der Datengrundlage",en:"Quality of the data basis"}];
+
+const PAIRS=[{id:"P1",a:"acc",b:"exp"},{id:"P2",a:"tim",b:"stk"},{id:"P3",a:"own",b:"hum"},{id:"P4",a:"lia",b:"dat"}];
+
+const UI={
+ de:{start:"Start",pause:"Pause",reset:"Zurück",stamp:"Zitat",notePh:"Notiz …",prev:"Zurück",next:"Weiter",
+  exTitle:"Abwägung",exLede:"Bitte jeweils entscheiden, was schwerer wiegt. Es gibt keine richtige Antwort — die Begründung ist interessanter als die Wahl.",
+  sortTitle:"Und jetzt die Reihenfolge",sortLede:"Karten in die Reihenfolge ziehen, die stimmt — oder die Pfeile nutzen. Die obersten drei zählen.",
+  anchorTitle:"Zurück zu Ihrem Fall",anchorLede:"Welcher einzelne Faktor hätte sich ändern müssen, damit Sie damals anders entschieden hätten?",
+  saveOn:"gespeichert",saveBusy:"speichert",saveOff:"nur im Speicher",
+  modMode:"Moderation",partMode:"Teilnahme",join:"Teilnehmen",leave:"Zur Moderation",
+  roomTitle:"Live-Raum",roomLede:"Die teilnehmende Person öffnet dieselbe Seite auf ihrem Gerät, tippt auf „Teilnehmen“ und gibt diesen Code ein. Antworten erscheinen hier, während sie eintreffen.",
+  roomOpen:"Raum öffnen",roomClose:"Raum schließen",roomDelete:"Raumdaten löschen",roomNone:"Kein Raum offen.",
+  waiting:"Wartet auf Teilnehmende …",joinedN:n=>n+" verbunden",
+  enterCode:"Raumcode",enterHint:"Vier Buchstaben, die Ihnen gerade genannt wurden.",enterGo:"Beitreten",
+  badCode:"Diesen Raum gibt es nicht. Code prüfen.",
+  pDone:"Danke. Das war alles.",pDoneSub:"Sie können das Fenster jetzt schließen.",
+  pStart:"Los geht's",pNext:"Weiter",pBack:"Zurück",pSend:"Absenden",
+  dataTitle:"Daten",dataSub:"Sitzungen, Export und Zusammenführung",
+  metaTitle:"Kurzangaben",metaLede:"Keine Namen, keine Firmennamen. Nur Merkmale, die in Tabelle 3 auftauchen.",
+  expTitle:"Diese Sitzung sichern",expLede:"JSON für die Zusammenführung, CSV für die Tabelle, Markdown für die Notizen samt Zeitmarken.",
+  sessTitle:"Gespeicherte Sitzungen",sessLede:"Automatisch gesichert, wenige Sekunden nach jeder Änderung. Zum Weiterarbeiten laden.",
+  aggTitle:"Interviews zusammenführen",aggLede:"Gespeicherte Sitzungen und geladene JSON-Dateien ergeben die Auswertung für Abschnitt 5.5 — deskriptiv, keine Statistik bei dieser Fallzahl.",
+  fields:{ind:"Branche",fun:"Funktion",sen:"Seniorität",fmt:"Format",age:"Altersgruppe",tec:"Technischer Hintergrund",dat:"Datum"},
+  aggPair:"Paarvergleiche",aggRank:"Mittlerer Rang",noData:"Noch nichts zusammengeführt.",
+  load:"Laden",del:"Löschen",imp:"JSON-Dateien laden",clear:"Leeren",mergeAll:"Alle Sitzungen zusammenführen",
+  stamped:"Zeitmarke gesetzt",saved:"Datei erzeugt",
+  wMemory:"<b>Automatisches Speichern steht hier nicht zur Verfügung.</b> In dieser Umgebung überlebt nichts einen Neuladen. Exportieren Sie nach jedem Interview die JSON-Datei.",
+  wLocal:"<b>Automatisches Speichern läuft — nur auf diesem Gerät.</b> Der Live-Raum braucht die geteilte Ablage und ist hier nicht verfügbar; führen Sie Block E per Bildschirmfreigabe im Reiter „Abwägung“.",
+  wCloud:"<b>Automatisches Speichern und Live-Raum sind aktiv.</b> Notizen bleiben in Ihrer privaten Ablage. Nur der Live-Raum nutzt eine geteilte Ablage — dort landen ausschließlich Abwägung und Reihenfolge, keine Namen und keine Freitexte aus dem Gespräch.",
+  foot:"Notizen und Sitzungen liegen in Ihrer privaten Ablage. Der Live-Raum nutzt eine geteilte Ablage, auf die jede Person mit dem Raumcode zugreifen kann — deshalb enthält er nur Faktorwahlen und Reihenfolgen, keine Namen, keine Arbeitgeber, keine Freitexte. Raumdaten nach dem Export löschen, dann bleibt von der Erhebung nur Ihre eigene Datei übrig."},
+ en:{start:"Start",pause:"Pause",reset:"Reset",stamp:"Quote",notePh:"Note …",prev:"Back",next:"Next",
+  exTitle:"Trade-offs",exLede:"For each pair, say which weighs more. There is no right answer — the reasoning matters more than the choice.",
+  sortTitle:"Now the order",sortLede:"Drag the cards into the right order, or use the arrows. The top three count.",
+  anchorTitle:"Back to your case",anchorLede:"Which single factor would have had to change for you to decide differently?",
+  saveOn:"saved",saveBusy:"saving",saveOff:"memory only",
+  modMode:"Moderation",partMode:"Participant",join:"Join",leave:"To moderation",
+  roomTitle:"Live room",roomLede:"The participant opens this same page on their own device, taps Join and enters this code. Answers appear here as they arrive.",
+  roomOpen:"Open room",roomClose:"Close room",roomDelete:"Delete room data",roomNone:"No room open.",
+  waiting:"Waiting for participants …",joinedN:n=>n+" connected",
+  enterCode:"Room code",enterHint:"The four letters you were just given.",enterGo:"Join",
+  badCode:"No such room. Check the code.",
+  pDone:"Thank you. That was everything.",pDoneSub:"You can close this window now.",
+  pStart:"Begin",pNext:"Next",pBack:"Back",pSend:"Send",
+  dataTitle:"Data",dataSub:"Sessions, export and merging",
+  metaTitle:"Brief details",metaLede:"No names, no employers. Only the attributes in Table 3.",
+  expTitle:"Save this session",expLede:"JSON for merging, CSV for the table, Markdown for the notes with timecodes.",
+  sessTitle:"Saved sessions",sessLede:"Saved automatically a few seconds after every change. Load one to continue.",
+  aggTitle:"Merge interviews",aggLede:"Saved sessions and loaded JSON files produce the aggregate for section 5.5 — descriptive only.",
+  fields:{ind:"Industry",fun:"Function",sen:"Seniority",fmt:"Format",age:"Age band",tec:"Technical background",dat:"Date"},
+  aggPair:"Pairwise comparisons",aggRank:"Mean rank",noData:"Nothing merged yet.",
+  load:"Load",del:"Delete",imp:"Load JSON files",clear:"Clear",mergeAll:"Merge all sessions",
+  stamped:"Timecode marked",saved:"File created",
+  wMemory:"<b>Automatic saving is unavailable here.</b> Nothing survives a reload. Export the JSON after every interview.",
+  wLocal:"<b>Automatic saving is on — this device only.</b> The live room needs shared storage and is unavailable; run Block E via screen share under Trade-offs.",
+  wCloud:"<b>Automatic saving and the live room are active.</b> Notes stay in your private storage. Only the live room uses shared storage, and it carries nothing but trade-offs and orderings.",
+  foot:"Notes and sessions sit in your private storage. The live room uses shared storage that anyone with the code can reach — which is why it carries only factor choices and orderings, no names, no employers, no free text. Delete the room data after exporting."}
+};
+
+/* ═══ 3 · Zustand ══════════════════════════════════════════ */
+let lang="de", blockIdx=0, running=false, elapsed=0, tickRef=null;
+let merged=[], room=null, roomPoll=null, saveTimer=null, mode="mod", P=null;
+
+const S={code:"I1",meta:{ind:"",fun:"",sen:"",fmt:"",age:"",tec:"",dat:new Date().toISOString().slice(0,10)},
+         notes:{},stamps:{},pairs:{},order:FACTORS.map(f=>f.id),anchor:"",quotes:{},transcript:"",offset:0,partWhy:"",partMissing:"",choices:{},newCodes:""};
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const T=()=>UI[lang], L=o=>o[lang];
+const F=id=>L(FACTORS.find(f=>f.id===id));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._r);t._r=setTimeout(()=>t.classList.remove("show"),1800)}
+
+function setSaveState(k){
+  const el=$("#saveState"); if(!el) return;
+  el.className="save "+(k==="busy"?"busy":k==="on"?"on":"off");
+  $("#saveText").textContent = k==="busy"?T().saveBusy : k==="on"?T().saveOn : T().saveOff;
+}
+function markSave(){
+  if(DB.kind==="memory") return;
+  clearTimeout(saveTimer); setSaveState("busy");
+  saveTimer=setTimeout(doSave,1200);
+}
+async function doSave(){
+  if(DB.kind==="memory") return;
+  try{ await DB.set("ttm:session:"+S.code,{...snapshot(),savedAt:Date.now()},false); setSaveState("on"); }
+  catch(_){ setSaveState("off"); }
+}
+
+/* ═══ 4 · Uhr & Zeitleiste ═════════════════════════════════ */
+const TOTAL=BLOCKS.reduce((a,b)=>a+b.min,0);
+function paintClock(){
+  const c=$("#clock"); c.textContent=mmss(elapsed);
+  c.classList.toggle("is-live",running&&elapsed<=TOTAL*60000);
+  c.classList.toggle("is-over",elapsed>TOTAL*60000);
+}
+function paintPlayhead(){
+  const ph=$("#playhead"); if(!ph) return;
+  ph.style.top=(Math.min(1,elapsed/(TOTAL*60000))*100)+"%";
+  ph.classList.toggle("is-over",elapsed>TOTAL*60000);
+}
+function buildRail(){
+  if(!BLOCKS.length) return;
+  const rail=$("#rail"); rail.innerHTML=""; let acc=0;
+  BLOCKS.forEach((b,i)=>{
+    const el=document.createElement("button");
+    el.className="seg"; el.style.top=(acc/TOTAL*100)+"%"; el.style.height=(b.min/TOTAL*100)+"%";
+    el.setAttribute("aria-current",i===blockIdx?"true":"false");
+    el.innerHTML='<span class="seg-k">'+b.k+'</span><span class="seg-t">'+String(Math.round(acc)).padStart(2,"0")+'′</span>';
+    el.onclick=()=>{blockIdx=i;renderGuide()};
+    rail.appendChild(el); acc+=b.min;
+  });
+  const ph=document.createElement("div"); ph.className="playhead"; ph.id="playhead"; ph.style.top="0%";
+  rail.appendChild(ph); paintPlayhead();
+}
+
+/* ═══ 5 · Leitfaden ════════════════════════════════════════ */
+function renderGuide(){
+  if(!BLOCKS.length) return;
+  const b=BLOCKS[blockIdx], v=$("#view-session");
+  v.innerHTML=
+    '<p class="eyebrow">'+(["0","W","Z","E"].includes(b.k)?esc(L(b).t):"Block "+b.k)+' · '+b.min+' min</p>'+
+    '<h1>'+esc(L(b).t)+'</h1><div class="srq">'+esc(b.srq)+'</div>'+
+    (L(b).s?'<p class="lede" style="margin:-12px 0 22px">'+esc(L(b).s)+'</p>':'')+
+    (b.brief?'<div class="brief">'+L(b.brief).map(function(x){return '<p>'+x+'</p>'}).join("")+'</div>':'')+
+    b.qs.map(q=>{
+      const st=(S.stamps[q.id]||[]).map(t=>'<button class="chip" data-drop="'+q.id+'" data-t="'+t+'">'+mmss(t)+'</button>').join("");
+      return '<div class="q'+(q.key?" is-key":"")+'">'+
+        '<div class="q-top"><div class="q-id">'+q.id+'</div><p class="q-text">'+esc(L(q))+
+        (q.key?'<span class="keytag">'+(lang==="de"?"nicht kürzen":"do not cut")+'</span>':'')+'</p></div>'+
+        (q.probe?'<div class="probe">'+esc(L(q.probe))+'</div>':'')+
+        (q.opts?'<div class="qopts">'+q.opts.map(function(o){
+          return '<button class="qopt" data-qo="'+q.id+'" data-o="'+o.id+'" aria-pressed="'+(S.choices[q.id]===o.id)+'">'+esc(L(o))+'</button>'
+        }).join("")+'</div>':'')+
+        (q.ex?'<div class="exline"><span>'+(lang==="de"?"so gemeint":"how to ask")+'</span>'+esc(L(q.ex))+'</div>':'')+
+        (q.why?'<div class="why">'+esc(L(q.why))+'</div>':'')+
+        '<div class="q-tools"><textarea class="note" data-q="'+q.id+'" placeholder="'+T().notePh+'">'+esc(S.notes[q.id]||"")+'</textarea>'+
+        '<button class="btn stamp" data-mark="'+q.id+'">'+T().stamp+'</button></div>'+
+        (st?'<div class="stamps">'+st+'</div>':'')+'</div>';
+    }).join("")+
+    '<div class="nav"><button class="btn" id="prevB"'+(blockIdx===0?" disabled":"")+'>← '+T().prev+'</button>'+
+    '<button class="btn btn-primary" id="nextB"'+(blockIdx===BLOCKS.length-1?" disabled":"")+'>'+T().next+' →</button></div>';
+
+  v.querySelectorAll(".note").forEach(t=>t.addEventListener("input",e=>{S.notes[e.target.dataset.q]=e.target.value;markSave()}));
+  v.querySelectorAll("[data-qo]").forEach(function(b){
+    b.onclick=function(){
+      const q=b.dataset.qo;
+      S.choices[q] = (S.choices[q]===b.dataset.o) ? "" : b.dataset.o;
+      markSave(); renderGuide();
+    };
+  });
+  v.querySelectorAll("[data-mark]").forEach(x=>x.onclick=()=>{
+    const id=x.dataset.mark; if(!S.stamps[id]) S.stamps[id]=[];
+    S.stamps[id].push(elapsed); toast(T().stamped); markSave(); renderGuide();
+  });
+  v.querySelectorAll("[data-drop]").forEach(c=>c.onclick=()=>{
+    const id=c.dataset.drop,t=+c.dataset.t;
+    S.stamps[id]=S.stamps[id].filter(x=>x!==t); markSave(); renderGuide();
+  });
+  const p=$("#prevB"),n=$("#nextB");
+  if(p)p.onclick=()=>{blockIdx--;renderGuide()};
+  if(n)n.onclick=()=>{blockIdx++;renderGuide()};
+  $$(".seg").forEach((s,i)=>s.setAttribute("aria-current",i===blockIdx?"true":"false"));
+}
+
+/* ═══ 6 · Abwägung (Moderation) ════════════════════════════ */
+function renderRank(){
+  $("#exTitle").textContent=T().exTitle; $("#exLede").textContent=T().exLede;
+  $("#sortTitle").textContent=T().sortTitle; $("#sortLede").textContent=T().sortLede;
+  $("#anchorTitle").textContent=T().anchorTitle; $("#anchorLede").textContent=T().anchorLede;
+  $("#anchorNote").value=S.anchor;
+  const cmp=document.getElementById("cmpBox");
+  if(cmp){
+    const h=analyseHtml({choices:S.choices,pairs:S.pairs,order:S.order},true);
+    cmp.innerHTML = h ? '<h2 style="font-size:19px;margin:0 0 4px">'+(lang==="de"?"Vergleich der Antworten":"Comparing the answers")+'</h2>'+
+      '<p class="lede">'+(lang==="de"
+        ? "Ergibt sich aus Vignette, Leiter und Abwägung. Die kursiven Zeilen sind Nachfassfragen für das Gespräch."
+        : "Derived from the vignette, the ladder and the trade-offs. The italic lines are follow-up probes.")+'</p>'+h : "";
+  }
+  const extra=document.getElementById("partExtra");
+  if(extra){
+    const bits=[];
+    if(S.partWhy.trim()) bits.push({k:(lang==="de"?"Warum Platz 1 oben steht":"Why first place is at the top"),v:S.partWhy});
+    if(S.partMissing.trim()) bits.push({k:(lang==="de"?"Fehlender Faktor":"Missing factor"),v:S.partMissing});
+    extra.innerHTML = bits.length ? bits.map(function(b){
+      return '<div style="margin-top:14px"><div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;'+
+        'text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:4px">'+b.k+'</div>'+
+        '<p style="margin:0;font-size:15px">'+esc(b.v)+'</p></div>'}).join("") : "";
+  }
+
+  $("#pairs").innerHTML=PAIRS.map((p,i)=>
+    '<div class="pair"><div class="pair-q">'+String(i+1).padStart(2,"0")+' — '+(lang==="de"?"Was wiegt schwerer?":"Which weighs more?")+'</div>'+
+    '<div class="pair-opts"><button class="opt" data-p="'+p.id+'" data-c="a" aria-pressed="'+(S.pairs[p.id]==="a")+'">'+esc(F(p.a))+'</button>'+
+    '<div class="vs">'+(lang==="de"?"od.":"or")+'</div>'+
+    '<button class="opt" data-p="'+p.id+'" data-c="b" aria-pressed="'+(S.pairs[p.id]==="b")+'">'+esc(F(p.b))+'</button></div></div>').join("");
+  $$("#pairs .opt").forEach(b=>b.onclick=()=>{S.pairs[b.dataset.p]=b.dataset.c;markSave();renderRank()});
+
+  const ul=$("#cards");
+  ul.innerHTML=S.order.map((id,i)=>
+    '<li class="card'+(i<3?" top3":"")+'" draggable="true" data-id="'+id+'">'+
+    '<span class="grip" aria-hidden="true">⠿</span><span class="rank">'+(i+1)+'</span>'+
+    '<span class="card-label">'+esc(F(id))+'</span>'+
+    '<button class="move" data-up="'+id+'" aria-label="hoch">↑</button>'+
+    '<button class="move" data-dn="'+id+'" aria-label="runter">↓</button></li>').join("");
+  ul.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{shiftIn(S,b.dataset.up,-1);markSave();renderRank()});
+  ul.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>{shiftIn(S,b.dataset.dn,1);markSave();renderRank()});
+  wireDrag(ul,S,()=>{markSave();renderRank()});
+}
+function shiftIn(store,id,d){
+  const i=store.order.indexOf(id),j=i+d;
+  if(j<0||j>=store.order.length)return;
+  const t=store.order[i]; store.order[i]=store.order[j]; store.order[j]=t;
+}
+function wireDrag(ul,store,redraw){
+  let dragId=null;
+  ul.querySelectorAll(".card").forEach(card=>{
+    card.addEventListener("dragstart",e=>{dragId=card.dataset.id;card.classList.add("dragging");
+      e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",dragId)}catch(_){}});
+    card.addEventListener("dragend",()=>{card.classList.remove("dragging");
+      ul.querySelectorAll(".card").forEach(c=>c.classList.remove("over"))});
+    card.addEventListener("dragover",e=>{e.preventDefault();card.classList.add("over")});
+    card.addEventListener("dragleave",()=>card.classList.remove("over"));
+    card.addEventListener("drop",e=>{
+      e.preventDefault(); const tgt=card.dataset.id;
+      if(!dragId||dragId===tgt)return;
+      const arr=store.order.filter(x=>x!==dragId);
+      arr.splice(arr.indexOf(tgt),0,dragId);
+      store.order=arr; redraw();
+    });
+  });
+}
+
+/* ═══ 7 · Live-Raum (Moderation) ═══════════════════════════ */
+const ALPHA="ABCDEFGHJKLMNPQRSTUVWXYZ";
+const newCode=()=>Array.from({length:4},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join("");
+
+async function openRoom(){
+  const code=newCode();
+  try{
+    await DB.set("ttm:room:"+code,{code,openedAt:Date.now(),session:S.code},true);
+    room={code,people:[]}; startPoll(); renderRoom();
+  }catch(_){ toast("!"); }
+}
+function closeRoom(){ stopPoll(); room=null; renderRoom(); }
+async function deleteRoom(){
+  if(!room) return;
+  const code=room.code;
+  const keys=await DB.list("ttm:room:"+code,true);
+  for(const k of keys) await DB.del(k,true);
+  await DB.del("ttm:room:"+code,true);
+  stopPoll(); room=null; renderRoom();
+  toast(lang==="de"?"Raumdaten gelöscht":"Room data deleted");
+}
+function startPoll(){ stopPoll(); pollRoom(); roomPoll=setInterval(pollRoom,4000); }
+function stopPoll(){ if(roomPoll) clearInterval(roomPoll); roomPoll=null; }
+
+async function pollRoom(){
+  if(!room) return;
+  const keys=await DB.list("ttm:room:"+room.code+":p:",true);
+  const out=[];
+  for(const k of keys){ const v=await DB.get(k,true); if(v) out.push(v); }
+  out.sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0));
+  room.people=out;
+  if(!$("#view-room").hidden) renderRoom();
+}
+
+function renderRoom(){
+  const v=$("#view-room"), t=T();
+  if(!DB.canRoom){
+    v.innerHTML='<p class="eyebrow">Block E · SRQ5</p><h1>'+t.roomTitle+'</h1><div class="warn bad">'+t.wLocal+'</div>';
+    return;
+  }
+  if(!room){
+    v.innerHTML='<p class="eyebrow">Block E · SRQ5</p><h1>'+t.roomTitle+'</h1><p class="lede">'+t.roomLede+'</p>'+
+      '<div class="panel"><p style="margin:0 0 14px">'+t.roomNone+'</p>'+
+      '<button class="btn btn-primary" id="openRoom">'+t.roomOpen+'</button></div>';
+    $("#openRoom").onclick=openRoom; return;
+  }
+
+  const done=room.people.filter(p=>p.done).length;
+  const ranks={}; FACTORS.forEach(f=>ranks[f.id]=[]);
+  room.people.forEach(p=>(p.order||[]).forEach((id,i)=>{if(ranks[id])ranks[id].push(i+1)}));
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const sorted=FACTORS.slice().sort((x,y)=>(mean(ranks[x.id])==null?99:mean(ranks[x.id]))-(mean(ranks[y.id])==null?99:mean(ranks[y.id])));
+
+  v.innerHTML=
+    '<p class="eyebrow">Block E · SRQ5</p><h1>'+t.roomTitle+'</h1><p class="lede">'+t.roomLede+'</p>'+
+    '<div class="panel" style="text-align:center;padding:26px 18px">'+
+      '<div class="roomhint">'+t.enterCode+'</div>'+
+      '<div class="roomcode">'+room.code+'</div>'+
+      '<div class="roomhint">'+(room.people.length?t.joinedN(room.people.length):t.waiting)+'</div>'+
+      '<div class="joined" style="justify-content:center">'+
+        room.people.map((p,i)=>'<span class="pill'+(p.done?" done":"")+'">'+(lang==="de"?"TN":"P")+(i+1)+(p.done?" ✓":"")+'</span>').join("")+
+      '</div>'+
+      (room.people.length?'<div class="row" style="justify-content:center;margin-top:16px">'+
+        room.people.map(function(p,i){return '<button class="btn" data-take="'+i+'">'+
+          (lang==="de"?"TN":"P")+(i+1)+(lang==="de"?" in Sitzung ":" into session ")+S.code+'</button>'}).join("")+
+        '</div>':'')+
+      '<div class="row" style="justify-content:center;margin-top:18px">'+
+        '<button class="btn" id="closeRoom">'+t.roomClose+'</button>'+
+        '<button class="btn btn-danger" id="delRoom">'+t.roomDelete+'</button></div></div>'+
+    '<div class="panel"><h3>'+t.aggPair+'</h3><p>'+done+' / '+room.people.length+' '+(lang==="de"?"fertig":"complete")+'</p>'+
+      PAIRS.map(p=>{
+        const rs=room.people.filter(x=>x.pairs&&x.pairs[p.id]);
+        const na=rs.filter(x=>x.pairs[p.id]==="a").length, nb=rs.length-na, tot=Math.max(1,rs.length);
+        return '<div class="split"><div class="split-h"><b>'+esc(F(p.a))+'</b><b style="text-align:right">'+esc(F(p.b))+'</b></div>'+
+          '<div class="split-bar"><div class="split-a" style="width:'+(na/tot*100)+'%">'+(na||"")+'</div>'+
+          '<div class="split-b" style="width:'+(nb/tot*100)+'%">'+(nb||"")+'</div></div></div>';
+      }).join("")+'</div>'+
+    '<div class="panel"><h3>'+t.aggRank+'</h3><p>'+(lang==="de"?"Aktualisiert sich, während Antworten eintreffen.":"Updates as answers arrive.")+'</p>'+
+      '<table><tbody>'+sorted.map(f=>{
+        const m=mean(ranks[f.id]); const pct=m?(1-(m-1)/(FACTORS.length-1))*100:0;
+        return '<tr><td class="bar-cell"><span class="bar-fill" style="width:'+pct.toFixed(0)+'%"></span><span>'+esc(L(f))+'</span></td>'+
+               '<td class="num">'+(m?m.toFixed(1):"—")+'</td></tr>';
+      }).join("")+'</tbody></table></div>';
+
+  $("#closeRoom").onclick=closeRoom;
+  $("#delRoom").onclick=deleteRoom;
+  v.querySelectorAll("[data-take]").forEach(function(b){
+    b.onclick=function(){
+      const p=room.people[+b.dataset.take]; if(!p) return;
+      if(p.choices) S.choices=Object.assign({},S.choices,p.choices);
+      if(p.reasons) Object.keys(p.reasons).forEach(function(k){ if(p.reasons[k]) S.notes[k]=p.reasons[k]; });
+      if(p.pairs) S.pairs=Object.assign({},p.pairs);
+      if(p.order&&p.order.length===FACTORS.length) S.order=p.order.slice();
+      S.partWhy=p.why||""; S.partMissing=p.missing||"";
+      markSave(); renderRank(); renderGuide();
+      toast(lang==="de"?"In Sitzung "+S.code+" übernommen":"Copied into session "+S.code);
+    };
+  });
+}
+
+/* ═══ 8 · Teilnehmeransicht ════════════════════════════════ */
+const HIDE="#topbar .tabs, #pcode, #clock, #toggleTimer, #resetTimer, #saveState";
+function enterParticipant(){
+  mode="part"; P={step:-1,code:"",pid:null,joinedAt:0,pairs:{},order:FACTORS.map(f=>f.id),done:false};
+  $("#modWrap").hidden=true; $("#partWrap").hidden=false;
+  $$(HIDE).forEach(e=>e.style.display="none");
+  $("#joinBtn").textContent=T().leave; $("#modeLabel").textContent=T().partMode;
+  renderPart();
+}
+function leaveParticipant(){
+  mode="mod"; P=null;
+  $("#modWrap").hidden=false; $("#partWrap").hidden=true;
+  $$(HIDE).forEach(e=>e.style.display="");
+  $("#joinBtn").textContent=T().join; $("#modeLabel").textContent=T().modMode;
+}
+async function partJoin(code){
+  code=(code||"").trim().toUpperCase();
+  if(code.length!==4){ toast(T().badCode); return; }
+  const meta=await DB.get("ttm:room:"+code,true);
+  if(!meta){ toast(T().badCode); return; }
+  P.code=code;
+  P.pid=Array.from({length:5},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join("");
+  P.joinedAt=Date.now(); P.step=0;
+  await pushPart(); renderPart();
+}
+async function pushPart(){
+  if(!P||!P.code) return;
+  try{
+    await DB.set("ttm:room:"+P.code+":p:"+P.pid,
+      {pid:P.pid,joinedAt:P.joinedAt,pairs:P.pairs,order:P.order,done:P.done,at:Date.now()},true);
+  }catch(_){}
+}
+function renderPart(){
+  const w=$("#partWrap"), t=T();
+
+  if(P.step===-1){
+    w.innerHTML='<div class="pstage"><h1 style="font-size:27px">'+t.roomTitle+'</h1>'+
+      '<p class="lede">'+t.enterHint+'</p>'+
+      '<input class="bigcode" id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false">'+
+      '<button class="btn btn-primary" id="joinGo" style="width:100%;margin-top:14px;padding:14px">'+t.enterGo+'</button></div>';
+    const i=$("#joinCode"); i.focus();
+    $("#joinGo").onclick=()=>partJoin(i.value);
+    i.addEventListener("keydown",e=>{if(e.key==="Enter")partJoin(i.value)});
+    return;
+  }
+  if(P.done){
+    w.innerHTML='<div class="pstage" style="text-align:center;padding-top:70px">'+
+      '<h1 style="font-size:27px">'+t.pDone+'</h1><p class="lede" style="margin:0 auto">'+t.pDoneSub+'</p></div>';
+    return;
+  }
+
+  const steps=PAIRS.length+1;
+  let dots='<div class="dots">';
+  for(let i=0;i<steps;i++) dots+='<span class="pdot '+(i<P.step?"on":i===P.step?"now":"")+'"></span>';
+  dots+='</div>';
+
+  if(P.step<PAIRS.length){
+    const p=PAIRS[P.step];
+    w.innerHTML='<div class="pstage">'+dots+
+      '<p class="pq">'+(lang==="de"?"Was wiegt für Sie schwerer?":"Which weighs more for you?")+'</p>'+
+      '<button class="opt" data-c="a" aria-pressed="'+(P.pairs[p.id]==="a")+'">'+esc(F(p.a))+'</button>'+
+      '<button class="opt" data-c="b" aria-pressed="'+(P.pairs[p.id]==="b")+'">'+esc(F(p.b))+'</button>'+
+      '<div class="row" style="margin-top:20px;justify-content:space-between">'+
+      '<button class="btn btn-quiet" id="pb"'+(P.step===0?" disabled":"")+'>← '+t.pBack+'</button>'+
+      '<button class="btn btn-primary" id="pn"'+(P.pairs[p.id]?"":" disabled")+'>'+t.pNext+' →</button></div></div>';
+    w.querySelectorAll(".opt").forEach(b=>b.onclick=async()=>{P.pairs[p.id]=b.dataset.c;await pushPart();renderPart()});
+    $("#pb").onclick=()=>{P.step--;renderPart()};
+    $("#pn").onclick=()=>{P.step++;renderPart()};
+    return;
+  }
+
+  w.innerHTML='<div class="pstage">'+dots+
+    '<p class="pq">'+t.sortTitle+'</p>'+
+    '<p class="lede">'+(lang==="de"?"Die obersten drei zählen. Pfeile benutzen oder Karten ziehen.":"The top three count. Use the arrows or drag the cards.")+'</p>'+
+    '<ul class="cards" id="pcards"></ul>'+
+    '<div class="row" style="margin-top:20px;justify-content:space-between">'+
+    '<button class="btn btn-quiet" id="pb">← '+t.pBack+'</button>'+
+    '<button class="btn btn-primary" id="psend" style="padding:12px 22px">'+t.pSend+'</button></div></div>';
+
+  const ul=$("#pcards");
+  const draw=()=>{
+    ul.innerHTML=P.order.map((id,i)=>
+      '<li class="card'+(i<3?" top3":"")+'" draggable="true" data-id="'+id+'">'+
+      '<span class="rank">'+(i+1)+'</span><span class="card-label">'+esc(F(id))+'</span>'+
+      '<button class="move" data-up="'+id+'" aria-label="hoch">↑</button>'+
+      '<button class="move" data-dn="'+id+'" aria-label="runter">↓</button></li>').join("");
+    ul.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{shiftIn(P,b.dataset.up,-1);pushPart();draw()});
+    ul.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>{shiftIn(P,b.dataset.dn,1);pushPart();draw()});
+    wireDrag(ul,P,()=>{pushPart();draw()});
+  };
+  draw();
+  $("#pb").onclick=()=>{P.step--;renderPart()};
+  $("#psend").onclick=async()=>{P.done=true;await pushPart();renderPart()};
+}
+
+/* ═══ 9 · Daten, Export, Zusammenführung ═══════════════════ */
+function snapshot(){
+  return {tool:"to-trust-the-machine/v3",code:S.code,meta:Object.assign({},S.meta),
+    durationSec:Math.floor(elapsed/1000),pairs:Object.assign({},S.pairs),order:S.order.slice(),
+    top3:S.order.slice(0,3),anchor:S.anchor,notes:Object.assign({},S.notes),stamps:Object.assign({},S.stamps),
+    quotes:Object.assign({},S.quotes),transcript:S.transcript,offset:S.offset,partWhy:S.partWhy,partMissing:S.partMissing,choices:Object.assign({},S.choices),newCodes:S.newCodes};
+}
+function download(name,text,mime){
+  const b=new Blob([text],{type:mime+";charset=utf-8"});
+  const u=URL.createObjectURL(b), a=document.createElement("a");
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1500); toast(T().saved);
+}
+const csvCell=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+
+function exportCsv(){
+  const s=snapshot();
+  const CH=[]; BLOCKS.forEach(b=>b.qs.forEach(q=>{if(q.opts)CH.push(q.id)}));
+  const head=["code","industry","function","seniority","format","age_band","technical","date","duration_sec"]
+    .concat(CH.map(x=>"choice_"+x), PAIRS.map(p=>p.id+"_winner"),
+            FACTORS.map(f=>"rank_"+f.id), ["top3","anchor_factor","new_codes"]);
+  const row=[s.code,s.meta.ind,s.meta.fun,s.meta.sen,s.meta.fmt,s.meta.age,s.meta.tec,s.meta.dat,s.durationSec]
+    .concat(CH.map(x=>(s.choices&&s.choices[x])||""),
+            PAIRS.map(p=>{const c=s.pairs[p.id];return c?(c==="a"?p.a:p.b):""}),
+            FACTORS.map(f=>s.order.indexOf(f.id)+1),
+            [s.top3.join(" > "), s.anchor.replace(/\s+/g," ").slice(0,300),
+             (s.newCodes||"").replace(/\s+/g," ").slice(0,300)]);
+  download(s.code+"_ranking.csv", head.map(csvCell).join(",")+"\n"+row.map(csvCell).join(",")+"\n","text/csv");
+}
+function exportMd(){
+  const s=snapshot();
+  let o="# "+s.code+" — "+(s.meta.fun||"?")+", "+(s.meta.ind||"?")+"\n\n"+
+        s.meta.dat+" · "+(s.meta.fmt||"?")+" · "+Math.round(s.durationSec/60)+" min\n";
+  BLOCKS.forEach(b=>{
+    const rows=b.qs.filter(q=>(s.notes[q.id]||"").trim()||(s.stamps[q.id]||[]).length||(s.choices&&s.choices[q.id]));
+    if(!rows.length)return;
+    o+="\n## "+b.k+" · "+L(b).t+"\n\n";
+    rows.forEach(q=>{
+      o+="**"+q.id+"** — "+L(q)+"\n\n";
+      if(q.opts&&s.choices&&s.choices[q.id]){
+        const o2=q.opts.find(function(x){return x.id===s.choices[q.id]});
+        if(o2) o+="Auswahl: **"+L(o2)+"**\n\n";
+      }
+      if((s.notes[q.id]||"").trim()) o+=s.notes[q.id].trim()+"\n\n";
+      const st=s.stamps[q.id]||[];
+      if(st.length) o+="> "+(lang==="de"?"Zeitmarken im Mitschnitt":"Timecodes")+": "+st.map(mmss).join(", ")+"\n\n";
+    });
+  });
+  o+="\n## E · "+T().exTitle+"\n\n";
+  PAIRS.forEach(p=>{const c=s.pairs[p.id];if(!c)return;
+    o+="- "+p.id+": **"+F(c==="a"?p.a:p.b)+"** > "+F(c==="a"?p.b:p.a)+"\n"});
+  o+="\n"+(lang==="de"?"Reihenfolge":"Order")+": "+s.order.map((id,i)=>(i+1)+". "+F(id)).join(" · ")+"\n";
+  if(s.anchor.trim()) o+="\n**"+T().anchorLede+"**\n\n"+s.anchor.trim()+"\n";
+  if((s.partWhy||"").trim()) o+="\n**"+(lang==="de"?"Warum Platz 1 oben steht":"Why first place is at the top")+"**\n\n"+s.partWhy.trim()+"\n";
+  if((s.partMissing||"").trim()) o+="\n**"+(lang==="de"?"Fehlender Faktor":"Missing factor")+"**\n\n"+s.partMissing.trim()+"\n";
+  download(s.code+"_notizen.md",o,"text/markdown");
+}
+
+async function renderData(){
+  const t=T(), v=$("#view-data");
+  const wcls=DB.kind==="cloud"?"good":DB.kind==="local"?"":"bad";
+  const wtxt=DB.kind==="cloud"?t.wCloud:DB.kind==="local"?t.wLocal:t.wMemory;
+
+  v.innerHTML=
+    '<p class="eyebrow">'+(lang==="de"?"Sitzung":"Session")+'</p><h1>'+t.dataTitle+'</h1>'+
+    '<div class="srq">'+t.dataSub+' · '+DB.kind+'</div>'+
+    '<div class="warn '+wcls+'">'+wtxt+'</div>'+
+    '<div class="panel"><h3>'+t.metaTitle+'</h3><p>'+t.metaLede+'</p><div class="meta-grid">'+
+      Object.keys(t.fields).map(k=>'<div class="field"><label for="m_'+k+'">'+t.fields[k]+'</label>'+
+        '<input id="m_'+k+'" data-m="'+k+'" value="'+esc(S.meta[k]||"")+'"></div>').join("")+
+    '</div></div>'+
+    '<div class="panel"><h3>'+(lang==="de"?"Sättigung":"Saturation")+'</h3>'+
+      '<p>'+(lang==="de"
+        ? "Welche Themen kamen in diesem Interview zum ersten Mal vor? Kommagetrennt. Wenn hier nichts Neues mehr steht, ist Sättigung erreicht — das ist die belastbarste Begründung für deine Fallzahl."
+        : "Which themes appeared for the first time in this interview? Comma-separated. When nothing new appears, you have saturation — the strongest justification for your sample size.")+'</p>'+
+      '<textarea class="note" id="newCodes" style="width:100%;min-height:60px" placeholder="'+
+      (lang==="de"?"z. B. Rückendeckung durch Vorgesetzte, Angst vor Präzedenzfall":"e.g. cover from superiors, fear of precedent")+
+      '">'+esc(S.newCodes||"")+'</textarea></div>'+
+    '<div class="panel"><h3>'+t.expTitle+'</h3><p>'+t.expLede+'</p><div class="row">'+
+      '<button class="btn btn-primary" id="expJson">JSON</button>'+
+      '<button class="btn" id="expCsv">CSV</button><button class="btn" id="expMd">Markdown</button></div></div>'+
+    '<div class="panel"><h3>'+(lang==="de"?"Ergebniscode eintragen":"Enter result code")+'</h3>'+
+      '<p>'+(lang==="de"
+        ? "Wenn jemand die Teilnehmerdatei allein ausgefüllt hat, kommt ein Code wie E-FAS2-ABBA-51384267 zurück. Hier einfügen — er füllt den Reiter „Abwägung“."
+        : "If someone completed the participant file on their own, they send back a code like E-FAS2-ABBA-51384267. Paste it here to fill the Trade-offs tab.")+'</p>'+
+      '<div class="row" style="margin-bottom:12px">'+
+      '<button class="btn" id="ansBtn">'+(lang==="de"?"Antwortdatei in diese Sitzung laden":"Load answer file into this session")+'</button>'+
+      '<input type="file" id="ansFile" accept=".json,application/json" hidden>'+
+      '<span style="font-size:12.5px;color:var(--faint)">'+(lang==="de"
+        ? "Für schriftlich ausgefüllte Fragebögen. Setzt das Format auf „schriftlich“."
+        : "For written self-completions. Sets the format to “written”.")+'</span></div>'+
+      '<div class="row"><input id="codeIn" placeholder="E-FAS2-ABBA-51384267" '+
+      'style="font-family:var(--mono);border:1px solid var(--rule);border-radius:5px;padding:8px 10px;width:210px">'+
+      '<button class="btn" id="codeGo">'+(lang==="de"?"Übernehmen":"Apply")+'</button></div></div>'+
+    '<div class="panel"><h3>'+t.sessTitle+'</h3><p>'+t.sessLede+'</p><div id="sessList"></div></div>'+
+    '<div class="panel"><h3>'+t.aggTitle+'</h3><p>'+t.aggLede+'</p><div class="row" style="margin-bottom:16px">'+
+      '<button class="btn" id="mergeAll">'+t.mergeAll+'</button>'+
+      '<button class="btn" id="impBtn">'+t.imp+'</button>'+
+      '<button class="btn btn-quiet" id="impClear">'+t.clear+'</button>'+
+      '<span id="impCount" style="font-family:var(--mono);font-size:12px;color:var(--faint)"></span>'+
+      '<input type="file" id="impFile" accept=".json,application/json" multiple hidden></div>'+
+      '<div class="grid2" id="aggOut"></div></div>';
+
+  v.querySelectorAll("[data-m]").forEach(i=>i.oninput=e=>{S.meta[e.target.dataset.m]=e.target.value;markSave()});
+  const nc=$("#newCodes");
+  if(nc) nc.addEventListener("input",function(e){S.newCodes=e.target.value;markSave()});
+  $("#expJson").onclick=()=>download(S.code+"_session.json",JSON.stringify(snapshot(),null,2),"application/json");
+  $("#expCsv").onclick=exportCsv;
+  $("#expMd").onclick=exportMd;
+  $("#ansBtn").onclick=()=>$("#ansFile").click();
+  $("#ansFile").onchange=async function(e){
+    const f=e.target.files[0]; e.target.value="";
+    if(!f) return;
+    try{
+      const o=JSON.parse(await f.text());
+      if(o.answers) Object.keys(o.answers).forEach(function(k){ if(o.answers[k]) S.notes[k]=o.answers[k]; });
+      if(o.reasons) Object.keys(o.reasons).forEach(function(k){ if(o.reasons[k]) S.notes[k]=o.reasons[k]; });
+      if(o.choices) S.choices=Object.assign({},S.choices,o.choices);
+      if(o.pairs) S.pairs=Object.assign({},S.pairs,o.pairs);
+      if(o.order&&o.order.length===FACTORS.length) S.order=o.order.slice();
+      S.partWhy=o.why||S.partWhy; S.partMissing=o.missing||S.partMissing;
+      if(o.mode==="self") S.meta.fmt = lang==="de" ? "schriftlich" : "written";
+      markSave(); renderGuide(); renderRank(); renderData();
+      toast(lang==="de"?"Antworten geladen":"Answers loaded");
+    }catch(_){ toast(lang==="de"?"Datei nicht lesbar":"Could not read the file"); }
+  };
+  $("#codeGo").onclick=()=>{
+    const ok=applyResultCode($("#codeIn").value);
+    toast(ok ? (lang==="de"?"Übernommen":"Applied")
+             : (lang==="de"?"Code nicht lesbar":"Code not readable"));
+  };
+  $("#impBtn").onclick=()=>$("#impFile").click();
+  $("#impClear").onclick=()=>{merged=[];renderAgg()};
+  $("#impFile").onchange=async e=>{
+    for(const f of e.target.files){
+      try{ const o=JSON.parse(await f.text()); if(o&&o.order) merged.push(o); }
+      catch(_){ toast((lang==="de"?"Nicht lesbar: ":"Could not read: ")+f.name); }
+    }
+    e.target.value=""; renderAgg();
+  };
+  $("#mergeAll").onclick=async()=>{
+    const keys=await DB.list("ttm:session:",false); merged=[];
+    for(const k of keys){ const o=await DB.get(k,false); if(o&&o.order) merged.push(o); }
+    renderAgg();
+  };
+  await renderSessions(); renderAgg();
+}
+
+async function renderSessions(){
+  const box=$("#sessList"); if(!box) return;
+  const keys=await DB.list("ttm:session:",false);
+  if(!keys.length){
+    box.innerHTML='<p style="color:var(--faint);font-size:13px;margin:0">'+
+      (lang==="de"?"Noch keine gespeicherte Sitzung.":"No saved session yet.")+'</p>';
+    return;
+  }
+  const rows=[];
+  for(const k of keys){ const o=await DB.get(k,false); if(o) rows.push(o); }
+  rows.sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
+  box.innerHTML='<table><thead><tr><th>#</th><th>'+T().fields.fun+'</th><th>'+T().fields.ind+'</th><th></th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td style="font-family:var(--mono);font-weight:600">'+esc(r.code)+'</td>'+
+      '<td>'+esc((r.meta&&r.meta.fun)||"—")+'</td><td>'+esc((r.meta&&r.meta.ind)||"—")+'</td>'+
+      '<td style="text-align:right;white-space:nowrap">'+
+      '<button class="btn btn-quiet" data-load="'+esc(r.code)+'">'+T().load+'</button>'+
+      '<button class="btn btn-quiet" data-del="'+esc(r.code)+'" style="color:var(--over)">'+T().del+'</button></td></tr>').join("")+
+    '</tbody></table>';
+  box.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>loadSession(b.dataset.load));
+  box.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{await DB.del("ttm:session:"+b.dataset.del,false);renderSessions()});
+}
+async function loadSession(code){
+  const o=await DB.get("ttm:session:"+code,false); if(!o) return;
+  S.code=o.code; Object.assign(S.meta,o.meta||{});
+  S.notes=o.notes||{}; S.stamps=o.stamps||{}; S.pairs=o.pairs||{};
+  S.order=o.order||FACTORS.map(f=>f.id); S.anchor=o.anchor||"";
+  S.quotes=o.quotes||{}; S.transcript=o.transcript||""; S.offset=o.offset||0;
+  S.partWhy=o.partWhy||""; S.partMissing=o.partMissing||"";
+  S.choices=o.choices||{}; S.newCodes=o.newCodes||"";
+  elapsed=(o.durationSec||0)*1000;
+  $("#pcode").value=S.code; paintClock(); paintPlayhead();
+  renderGuide(); renderRank(); renderData();
+  toast((lang==="de"?"Sitzung ":"Session ")+code+(lang==="de"?" geladen":" loaded"));
+}
+
+function renderAgg(){
+  const box=$("#aggOut"); if(!box) return;
+  const c=$("#impCount");
+  if(c) c.textContent = merged.length ? merged.length+(lang==="de"?" Interviews":" interviews") : "";
+  if(!merged.length){ box.innerHTML='<p style="color:var(--faint);font-size:13px">'+T().noData+'</p>'; return; }
+
+  const wins={}; PAIRS.forEach(p=>{wins[p.id]={};wins[p.id][p.a]=0;wins[p.id][p.b]=0;wins[p.id].n=0});
+  merged.forEach(s=>PAIRS.forEach(p=>{
+    const ch=s.pairs&&s.pairs[p.id]; if(!ch)return;
+    wins[p.id][ch==="a"?p.a:p.b]++; wins[p.id].n++;
+  }));
+  const ranks={},tops={}; FACTORS.forEach(f=>{ranks[f.id]=[];tops[f.id]=0});
+  merged.forEach(s=>{
+    (s.order||[]).forEach((id,i)=>{if(ranks[id])ranks[id].push(i+1)});
+    (s.top3||[]).forEach(id=>{if(tops[id]!==undefined)tops[id]++});
+  });
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const sorted=FACTORS.slice().sort((x,y)=>(mean(ranks[x.id])==null?99:mean(ranks[x.id]))-(mean(ranks[y.id])==null?99:mean(ranks[y.id])));
+
+  box.innerHTML=
+    '<div><h3 style="font-size:14px;margin:0 0 10px">'+T().aggPair+'</h3><table><thead><tr><th>#</th><th>'+
+      (lang==="de"?"Gewinnt":"Wins")+'</th><th class="num">n</th></tr></thead><tbody>'+
+      PAIRS.map(p=>{
+        const w=wins[p.id];
+        const lead=w[p.a]===w[p.b]?(lang==="de"?"unentschieden":"tied"):F(w[p.a]>w[p.b]?p.a:p.b);
+        return '<tr><td style="font-family:var(--mono);font-size:12px">'+p.id+'</td><td>'+esc(lead)+
+          ' <span style="color:var(--faint);font-family:var(--mono);font-size:11px">'+w[p.a]+':'+w[p.b]+'</span></td>'+
+          '<td class="num">'+w.n+'</td></tr>';
+      }).join("")+'</tbody></table></div>'+
+    '<div><h3 style="font-size:14px;margin:0 0 10px">'+T().aggRank+'</h3><table><thead><tr><th>'+
+      (lang==="de"?"Faktor":"Factor")+'</th><th class="num">⌀</th><th class="num">Top 3</th></tr></thead><tbody>'+
+      sorted.map(f=>{
+        const m=mean(ranks[f.id]); const pct=m?(1-(m-1)/(FACTORS.length-1))*100:0;
+        return '<tr><td class="bar-cell"><span class="bar-fill" style="width:'+pct.toFixed(0)+'%"></span><span>'+esc(L(f))+'</span></td>'+
+          '<td class="num">'+(m?m.toFixed(1):"—")+'</td><td class="num">'+tops[f.id]+'</td></tr>';
+      }).join("")+'</tbody></table></div>'+aggModes()+aggEffect()+aggChoices()+aggSample();
+}
+
+function aggModes(){
+  const de=lang==="de";
+  let iv=0, sf=0;
+  merged.forEach(function(x){
+    const f=((x.meta&&x.meta.fmt)||"").toLowerCase();
+    if(f.indexOf("schrift")>=0||f.indexOf("written")>=0) sf++; else iv++;
+  });
+  if(!sf) return "";
+  return '<div style="grid-column:1/-1;border-left:3px solid var(--live);background:#FFF9EF;'+
+    'padding:12px 14px;border-radius:0 6px 6px 0;font-size:13px;color:#6B4A0F">'+
+    '<b>'+(de?"Zwei Erhebungsformen gemischt: ":"Two collection modes mixed: ")+iv+
+    (de?" Gespräche, ":" interviews, ")+sf+(de?" schriftliche Fragebögen.":" written questionnaires.")+'</b> '+
+    (de?"Diese Zahlen gehören in Kapitel 5 getrennt berichtet — schriftliche Antworten entstehen ohne Nachfragen und sind systematisch kürzer."
+       :"Report these separately in chapter 5 — written answers arise without probing and are systematically shorter.")+'</div>';
+}
+function aggEffect(){
+  const de=lang==="de";
+  let n=0, diff=0, proSys=0, proHum=0;
+  merged.forEach(function(s){
+    const c=s.choices||{}; if(!c.V1||!c.V2) return;
+    n++; const d=ADOPT[c.V1]-ADOPT[c.V2];
+    if(d!==0){ diff++; if(d>0) proSys++; else proHum++; }
+  });
+  if(!n) return "";
+  return '<div style="grid-column:1/-1;border:1px solid var(--signal);border-radius:8px;padding:16px 18px;background:var(--soft)">'+
+    '<h3 style="font-size:14px;margin:0 0 6px">'+(de?"Quelleneffekt":"Source effect")+'</h3>'+
+    '<p style="font-size:15.5px;margin:0 0 6px;color:var(--ink)"><b>'+diff+'</b>'+(de?" von ":" of ")+'<b>'+n+
+    '</b>'+(de?" Teilnehmenden haben dieselbe Empfehlung unterschiedlich behandelt, je nachdem ob sie vom System oder von einem Menschen kam."
+             :" participants treated the identical recommendation differently depending on whether it came from the system or a human.")+'</p>'+
+    '<p style="font-size:13px;margin:0;color:var(--muted)">'+(de?"Weiter mitgegangen beim System: ":"Went further with the system: ")+proSys+
+    (de?" · beim Menschen: ":" · with the human: ")+proHum+
+    (de?" — als Häufigkeiten berichten, nicht als Prozent.":" — report as counts, never percentages.")+'</p></div>';
+}
+function aggChoices(){
+  const de=lang==="de", out=[];
+  BLOCKS.forEach(function(b){ b.qs.forEach(function(q){
+    if(!q.opts) return;
+    const counts={}; let n=0;
+    merged.forEach(function(s){ const c=s.choices&&s.choices[q.id]; if(!c) return; counts[c]=(counts[c]||0)+1; n++; });
+    if(!n) return;
+    out.push('<div style="margin-bottom:18px"><h3 style="font-size:14px;margin:0 0 2px">'+q.id+'</h3>'+
+      '<p style="font-size:12.5px;color:var(--faint);margin:0 0 8px">'+esc(L(q)).slice(0,110)+'</p>'+
+      '<table><tbody>'+q.opts.map(function(o){
+        const c=counts[o.id]||0;
+        return '<tr><td class="bar-cell"><span class="bar-fill" style="width:'+(c/n*100).toFixed(0)+'%"></span>'+
+          '<span>'+esc(L(o))+'</span></td><td class="num">'+c+'</td></tr>';
+      }).join("")+'</tbody></table>'+
+      '<p style="font-family:var(--mono);font-size:10.5px;color:var(--faint);margin:5px 0 0">n = '+n+
+      (de?" · als Häufigkeiten berichten, nicht als Prozent":" · report as counts, never as percentages")+'</p></div>');
+  });});
+  return out.length ? '<div>'+out.join("")+'</div>' : "";
+}
+
+function aggSample(){
+  const de=lang==="de";
+  const rows=merged.map(function(s){return {
+    code:s.code, fun:(s.meta&&s.meta.fun)||"—", ind:(s.meta&&s.meta.ind)||"—",
+    sen:(s.meta&&s.meta.sen)||"—", tec:(s.meta&&s.meta.tec)||"—",
+    nc:((s.newCodes||"").split(",").map(function(x){return x.trim()}).filter(Boolean)).length };});
+  if(!rows.length) return "";
+  return '<div><h3 style="font-size:14px;margin:0 0 2px">'+(de?"Streuung und Sättigung":"Variation and saturation")+'</h3>'+
+    '<p style="font-size:12.5px;color:var(--faint);margin:0 0 8px">'+(de
+      ? "Lücken in dieser Tabelle sind wichtiger als die Zeilenzahl. Sinkt die letzte Spalte auf null, ist Sättigung erreicht."
+      : "Gaps in this table matter more than the number of rows. When the last column reaches zero, you have saturation.")+'</p>'+
+    '<table><thead><tr><th>#</th><th>'+(de?"Funktion":"Function")+'</th><th>'+(de?"Branche":"Industry")+'</th>'+
+    '<th>'+(de?"Sen.":"Sen.")+'</th><th class="num">'+(de?"neu":"new")+'</th></tr></thead><tbody>'+
+    rows.map(function(r){return '<tr><td style="font-family:var(--mono);font-weight:600">'+esc(r.code)+'</td>'+
+      '<td>'+esc(r.fun)+'</td><td>'+esc(r.ind)+'</td><td>'+esc(r.sen)+'</td>'+
+      '<td class="num"'+(r.nc===0?' style="color:var(--ok);font-weight:700"':'')+'>'+r.nc+'</td></tr>';}).join("")+
+    '</tbody></table></div>';
+}
+
+
+/* ═══ 9a · Antwortvergleich ════════════════════════════════
+   Drei Gegenüberstellungen, die sich aus den Antworten selbst
+   ergeben. Neutral formuliert: Spannungen sind normal und
+   kein Fehler der Person.
+   ═══════════════════════════════════════════════════════════ */
+const ADOPT={follow:2,adjust:1,reject:0};
+const LAD={a:1,b:2,c:3,d:4,none:5};
+
+function analyseAnswers(A){
+  const de=lang==="de", ch=A.choices||{}, pr=A.pairs||{}, od=A.order||[];
+  const out=[];
+
+  /* 1 · Quelleneffekt: identischer Inhalt, andere Quelle */
+  if(ch.V1 && ch.V2){
+    const diff=ADOPT[ch.V1]-ADOPT[ch.V2];
+    out.push(diff===0
+      ? {tone:"ok",
+         t:de?"Quelle machte keinen Unterschied":"Source made no difference",
+         x:de?"Sie haben dieselbe Empfehlung gleich behandelt, egal ob sie vom System oder von der Kollegin kam."
+             :"You treated the identical recommendation the same way, whether it came from the system or the colleague.",
+         p:de?"Nachfassen: „Gibt es Fälle, in denen die Quelle für Sie doch etwas ändern würde?“"
+             :"Probe: “Are there cases where the source would change something for you?”"}
+      : {tone:"tension",
+         t:de?"Die Quelle hat den Ausschlag gegeben":"The source tipped the balance",
+         x:(de?"Inhalt und Begründung waren identisch. Beim ":"Content and reasoning were identical. You went further with the ")+
+           (diff>0?(de?"System":"system"):(de?"Menschen":"human"))+
+           (de?" sind Sie weiter mitgegangen als beim anderen.":" than with the other."),
+         p:de?"Nachfassen: „Inhalt und Begründung waren identisch — woran genau lag der Unterschied?“"
+             :"Probe: “Content and reasoning were identical — what exactly made the difference?”"});
+  }
+
+  /* 2 · Konfliktfall gegen die Einzelurteile */
+  if(ch.V1&&ch.V2&&ch.V3&&ch.V3!=="own"){
+    const lean = ADOPT[ch.V1]>ADOPT[ch.V2] ? "system" : ADOPT[ch.V2]>ADOPT[ch.V1] ? "human" : null;
+    if(lean && ch.V3!==lean){
+      out.push({tone:"tension",
+        t:de?"Im Konflikt anders entschieden":"Decided differently under conflict",
+        x:de?"Einzeln betrachtet sind Sie der einen Seite weiter gefolgt — im direkten Konflikt haben Sie sich dann für die andere entschieden."
+            :"Taken separately you went further with one side — in the direct conflict you chose the other.",
+        p:de?"Nachfassen: „Was ändert sich, wenn beide gleichzeitig auf dem Tisch liegen?“"
+            :"Probe: “What changes when both are on the table at once?”"});
+    }
+  }
+
+  /* 3 · Paarvergleiche gegen die Rangfolge */
+  if(od.length===FACTORS.length && Object.keys(pr).length){
+    const mism=[];
+    PAIRS.forEach(function(p){
+      const c=pr[p.id]; if(!c) return;
+      const win=c==="a"?p.a:p.b, los=c==="a"?p.b:p.a;
+      if(od.indexOf(win)>od.indexOf(los)) mism.push({p:p.id,win:win,los:los});
+    });
+    const nAsked=PAIRS.filter(function(p){return pr[p.id]}).length;
+    out.push(mism.length===0
+      ? {tone:"ok",
+         t:de?"Abwägung und Reihenfolge passen zusammen":"Trade-offs and ranking agree",
+         x:de?"Alle "+nAsked+" Einzelentscheidungen decken sich mit Ihrer Rangfolge."
+             :"All "+nAsked+" individual choices match your ranking.",
+         p:""}
+      : {tone:"tension",
+         t:de?mism.length+" von "+nAsked+" Abwägungen weichen von der Reihenfolge ab"
+             :mism.length+" of "+nAsked+" trade-offs diverge from the ranking",
+         x:mism.map(function(m){
+             return (de?"Einzeln wog ":"Alone, ")+F(m.win)+(de?" schwerer als ":" outweighed ")+F(m.los)+
+                    (de?" — in der Reihenfolge steht es darunter.":" — in the ranking it sits below it.")}).join(" "),
+         p:de?"Nachfassen: „Bei "+F(mism[0].win)+" gegen "+F(mism[0].los)+" hatten Sie sich anders entschieden — was war da anders?“"
+             :"Probe: “You chose differently on "+F(mism[0].win)+" versus "+F(mism[0].los)+" — what was different there?”"});
+  }
+
+  /* 4 · Tragweite */
+  if(ch.L1){
+    const lab={a:de?"schon bei einer Wochenplanung":"already at weekly planning",
+               b:de?"ab 50 000 € Budget":"from €50,000 of budget",
+               c:de?"erst bei einer Standortschließung":"only at closing a site",
+               d:de?"erst bei einer Personalentscheidung":"only at a personnel decision",
+               none:de?"bei keiner der vier Stufen":"at none of the four levels"}[ch.L1];
+    const odd = ch.L1==="none" && ch.V1==="reject";
+    out.push({tone:odd?"tension":"neutral",
+      t:de?"Ihre Grenze liegt "+lab:"Your limit sits "+lab,
+      x:odd?(de?"Zugleich haben Sie den Systemvorschlag in der Vignette nicht übernommen."
+                :"At the same time you did not adopt the system's suggestion in the vignette.")
+           :(de?"Ab hier wird der Vorschlag nicht mehr ungeprüft übernommen."
+                :"From here the suggestion is no longer adopted unchecked."),
+      p:odd?(de?"Nachfassen: „Sie sagten, es gäbe keine Grenze — in der Vignette sind Sie aber nicht mitgegangen.“"
+                :"Probe: “You said there is no limit — but in the vignette you did not go along.”"):""});
+  }
+  return out;
+}
+
+function analyseHtml(A,withProbe){
+  const items=analyseAnswers(A);
+  if(!items.length) return "";
+  const col={tension:"var(--live)",ok:"var(--ok)",neutral:"var(--faint)"};
+  return items.map(function(it){
+    return '<div style="border-left:3px solid '+col[it.tone]+';padding:2px 0 2px 14px;margin:0 0 16px">'+
+      '<div style="font-weight:600;font-size:15.5px;margin-bottom:3px">'+esc(it.t)+'</div>'+
+      '<p style="margin:0;font-size:14.5px;color:var(--muted)">'+esc(it.x)+'</p>'+
+      (withProbe&&it.p?'<p style="margin:7px 0 0;font-size:13.5px;color:var(--signal);font-style:italic">'+esc(it.p)+'</p>':'')+
+      '</div>';
+  }).join("");
+}
+
+/* ═══ 9b · Transkript → Zitate ═════════════════════════════
+   Die Zeitmarken aus dem Leitfaden sind Sekunden ab Gesprächsbeginn.
+   Das Transkript hat seine eigene Uhr. Ein einmalig bestimmter Versatz
+   bringt beide zur Deckung; danach lässt sich zu jeder Marke der
+   passende Ausschnitt herausziehen.
+   ═══════════════════════════════════════════════════════════ */
+let TR={lines:[],pre:20,post:60,pick:false};
+
+function parseTranscript(raw){
+  const tsRe=/^\s*[\[\(]?(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d{1,3})?[\]\)]?\s*[-–—]?\s*(.*)$/;
+  const spRe=/^(?:\*\*)?\s*([\wÄÖÜäöüß .\-]{1,28}?)\s*(?:\*\*)?\s*:\s+(.*)$/;
+  const out=[];
+  raw.split(/\r?\n/).forEach(line=>{
+    if(!line.trim()) return;
+    const m=line.match(tsRe);
+    if(m){
+      const h=m[3]!==undefined?+m[1]:0;
+      const mi=m[3]!==undefined?+m[2]:+m[1];
+      const se=m[3]!==undefined?+m[3]:+m[2];
+      let rest=m[4]||"", spk="";
+      const s=rest.match(spRe);
+      if(s){ spk=s[1].trim(); rest=s[2]; }
+      out.push({t:h*3600+mi*60+se, spk, txt:rest.trim()});
+    }else if(out.length){
+      const s=line.match(spRe);
+      if(s){ out.push({t:out[out.length-1].t, spk:s[1].trim(), txt:s[2].trim()}); }
+      else { out[out.length-1].txt += " "+line.trim(); }
+    }
+  });
+  return out;
+}
+function allStamps(){
+  const out=[];
+  BLOCKS.forEach(b=>b.qs.forEach(q=>{
+    (S.stamps[q.id]||[]).forEach(ms=>out.push({qid:q.id, q, block:b, t:Math.floor(ms/1000)}));
+  }));
+  return out.sort((a,b)=>a.t-b.t);
+}
+function windowText(tSec){
+  const from=tSec+S.offset-TR.pre, to=tSec+S.offset+TR.post;
+  return TR.lines.filter(l=>l.t>=from && l.t<=to)
+                 .map(l=>(l.spk?l.spk+": ":"")+l.txt).join("\n");
+}
+const hms=s=>{s=Math.max(0,Math.round(s));
+  return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
+
+function renderTranscript(){
+  const v=$("#view-transcript");
+  const de=lang==="de";
+  TR.lines=parseTranscript(S.transcript||"");
+  const stamps=allStamps();
+  const hasTs=TR.lines.length>0;
+
+  v.innerHTML=
+    '<p class="eyebrow">'+(de?"Auswertung":"Analysis")+'</p>'+
+    '<h1>'+(de?"Transkript und Zitate":"Transcript and quotes")+'</h1>'+
+    '<div class="srq">'+(de
+      ? "Transkript einfügen, Versatz bestimmen, Ausschnitte kürzen — Ergebnis ist eine Zitatliste für Kapitel 5."
+      : "Paste the transcript, set the offset, trim the excerpts — the result is a quote sheet for chapter 5.")+'</div>'+
+
+    '<div class="panel"><h3>1 · '+(de?"Transkript einfügen":"Paste transcript")+'</h3>'+
+    '<p>'+(de
+      ? "Aus Granola: Einstellungen → Profil → CSV erzeugen, oder die Notiz öffnen und das Transkript kopieren. Nötig sind Zeitangaben am Zeilenanfang, etwa 00:14:22 oder 14:22."
+      : "From Granola: Settings → Profile → Generate CSV, or open the note and copy the transcript. Timestamps at the start of each line are required.")+'</p>'+
+    '<textarea class="note" id="trRaw" style="width:100%;min-height:130px;font-family:var(--mono);font-size:12.5px" '+
+    'placeholder="00:00:12  Me: Vielen Dank, dass Sie sich Zeit nehmen …">'+esc(S.transcript||"")+'</textarea>'+
+    '<p style="margin:10px 0 0;font-family:var(--mono);font-size:11.5px;color:'+(hasTs?"var(--ok)":"var(--faint)")+'">'+
+      (hasTs ? TR.lines.length+(de?" Zeilen erkannt":" lines detected")
+             : (de?"Noch keine Zeilen mit Zeitangabe erkannt.":"No timestamped lines detected yet."))+'</p></div>'+
+
+    '<div class="panel"><h3>2 · '+(de?"Versatz bestimmen":"Set the offset")+'</h3>'+
+    '<p>'+(de
+      ? "Deine Uhr startete beim Drücken von Start, die Aufnahme womöglich Sekunden früher. Trag den Unterschied ein — oder klick unten die Transkriptzeile an, an der deine erste Zeitmarke liegt."
+      : "Your clock started when you pressed Start; the recording may have begun seconds earlier. Enter the difference, or click the transcript line where your first stamp falls.")+'</p>'+
+    '<div class="row">'+
+      '<div class="field" style="max-width:150px"><label>'+(de?"Versatz (Sek.)":"Offset (sec)")+'</label>'+
+        '<input id="trOff" type="number" value="'+(S.offset||0)+'"></div>'+
+      '<div class="field" style="max-width:120px"><label>'+(de?"davor":"before")+'</label>'+
+        '<input id="trPre" type="number" value="'+TR.pre+'"></div>'+
+      '<div class="field" style="max-width:120px"><label>'+(de?"danach":"after")+'</label>'+
+        '<input id="trPost" type="number" value="'+TR.post+'"></div>'+
+      (stamps.length&&hasTs?'<button class="btn" id="trPick" aria-pressed="'+TR.pick+'" style="align-self:flex-end">'+
+        (de?"Erste Marke zuordnen":"Locate first stamp")+'</button>':"")+
+    '</div>'+
+    (TR.pick?'<div class="warn" style="margin:14px 0 0">'+(de
+      ? "Klick jetzt unten im Transkript die Zeile an, an der deine erste Zeitmarke ("+hms(stamps[0].t)+", Frage "+stamps[0].qid+") liegt."
+      : "Now click the transcript line where your first stamp ("+hms(stamps[0].t)+", question "+stamps[0].qid+") falls.")+'</div>':"")+
+    (TR.pick?'<div id="trLines" style="max-height:280px;overflow:auto;margin-top:12px;border:1px solid var(--rule);border-radius:6px">'+
+      TR.lines.map((l,i)=>'<div class="trline" data-i="'+i+'" style="padding:6px 10px;border-bottom:1px solid var(--rule);cursor:pointer;font-size:13px">'+
+      '<span style="font-family:var(--mono);font-size:11px;color:var(--faint)">'+hms(l.t)+'</span> '+
+      (l.spk?'<b>'+esc(l.spk)+':</b> ':'')+esc(l.txt.slice(0,140))+'</div>').join("")+'</div>':"")+
+    '</div>'+
+
+    '<div class="panel"><h3>3 · '+(de?"Zitate":"Quotes")+'</h3>'+
+    '<p>'+(de
+      ? stamps.length+" Zeitmarke(n) aus dem Leitfaden. Jeder Ausschnitt ist ein Vorschlag — kürz ihn auf den Satz, den du wirklich zitieren willst."
+      : stamps.length+" stamp(s) from the guide. Each excerpt is a proposal — trim it to the sentence you actually want.")+'</p>'+
+    (!stamps.length
+      ? '<p style="color:var(--faint);font-size:13px;margin:0">'+(de
+          ? "Noch keine Zeitmarken gesetzt. Im Leitfaden während des Gesprächs auf „Zitat“ drücken."
+          : "No stamps yet. Press Quote in the guide during the interview.")+'</p>'
+      : stamps.map(s=>{
+          const key=s.qid+"@"+s.t;
+          const val = S.quotes[key]!==undefined ? S.quotes[key] : (hasTs?windowText(s.t):"");
+          return '<div style="border-top:1px solid var(--rule);padding:14px 0">'+
+            '<div class="row" style="gap:10px;margin-bottom:6px">'+
+            '<span style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--signal)">'+s.qid+'</span>'+
+            '<span style="font-family:var(--mono);font-size:11px;color:var(--faint)">'+hms(s.t)+' → '+hms(s.t+(S.offset||0))+'</span></div>'+
+            '<p style="font-size:14px;margin:0 0 8px;color:var(--muted)">'+esc(L(s.q))+'</p>'+
+            '<textarea class="note" data-quote="'+key+'" style="width:100%;min-height:76px">'+esc(val)+'</textarea>'+
+            '</div>';
+        }).join("")
+    )+
+    (stamps.length?'<div class="row" style="margin-top:16px">'+
+      '<button class="btn btn-primary" id="trExport">'+(de?"Zitatliste sichern":"Save quote sheet")+'</button>'+
+      '<button class="btn btn-quiet" id="trReset">'+(de?"Ausschnitte neu ziehen":"Re-extract excerpts")+'</button></div>':"")+
+    '</div>';
+
+  const raw=$("#trRaw");
+  if(raw) raw.addEventListener("input",e=>{S.transcript=e.target.value;markSave();
+    clearTimeout(raw._r); raw._r=setTimeout(renderTranscript,700)});
+  const off=$("#trOff");
+  if(off) off.addEventListener("change",e=>{S.offset=+e.target.value||0;markSave();renderTranscript()});
+  const pre=$("#trPre"), post=$("#trPost");
+  if(pre) pre.addEventListener("change",e=>{TR.pre=+e.target.value||0;renderTranscript()});
+  if(post) post.addEventListener("change",e=>{TR.post=+e.target.value||0;renderTranscript()});
+  const pick=$("#trPick");
+  if(pick) pick.onclick=()=>{TR.pick=!TR.pick;renderTranscript()};
+  v.querySelectorAll(".trline").forEach(el=>el.onclick=()=>{
+    const l=TR.lines[+el.dataset.i];
+    S.offset=Math.round(l.t-stamps[0].t); TR.pick=false; markSave(); renderTranscript();
+    toast((de?"Versatz: ":"Offset: ")+S.offset+" s");
+  });
+  v.querySelectorAll("[data-quote]").forEach(t=>t.addEventListener("input",e=>{
+    S.quotes[e.target.dataset.quote]=e.target.value; markSave();
+  }));
+  const rst=$("#trReset");
+  if(rst) rst.onclick=()=>{S.quotes={};markSave();renderTranscript()};
+  const exp=$("#trExport");
+  if(exp) exp.onclick=()=>exportQuotes(stamps);
+}
+
+function exportQuotes(stamps){
+  const de=lang==="de";
+  let o="# "+S.code+" — "+(de?"Zitatliste":"Quote sheet")+"\n\n"+
+        (S.meta.fun||"?")+", "+(S.meta.ind||"?")+" · "+(S.meta.dat||"")+"\n\n"+
+        "> "+(de
+          ? "Zuordnung nach Frage. In Kapitel 5 nur Rolle und Branche nennen, z. B. „Interviewee 3, Finanzen“."
+          : "Ordered by question. In chapter 5 attribute by role and industry only.")+"\n";
+  let lastBlock="";
+  stamps.forEach(s=>{
+    if(s.block.k!==lastBlock){ o+="\n## "+s.block.k+" · "+L(s.block).t+"\n\n_"+s.block.srq+"_\n\n"; lastBlock=s.block.k; }
+    const q=S.quotes[s.qid+"@"+s.t];
+    o+="**"+s.qid+"** — "+L(s.q)+"\n\n";
+    o+="`"+hms(s.t)+"`"+(S.offset?" ("+(de?"Aufnahme":"recording")+" "+hms(s.t+S.offset)+")":"")+"\n\n";
+    o+=(q&&q.trim()? q.trim().split(/\n/).map(x=>"> "+x).join("\n") : "> ["+(de?"Ausschnitt fehlt":"excerpt missing")+"]")+"\n\n";
+  });
+  download(S.code+"_zitate.md",o,"text/markdown");
+}
+
+/* Ergebniscode aus der Teilnehmerdatei einlesen: E-ABBA-51384267 */
+const CHMAP={F:"follow",A:"adjust",R:"reject",S:"system",H:"human",O:"own",
+             "1":"a","2":"b","3":"c","4":"d","0":"none"};
+function choiceQids(){
+  const out=[]; BLOCKS.forEach(b=>b.qs.forEach(q=>{if(q.opts)out.push(q.id)}));
+  return out;
+}
+function applyResultCode(str){
+  const raw=String(str||"").trim().toUpperCase();
+  let m=raw.match(/^E-([A-Z0-9-]{2,8})-([AB-]{4})-(\d{8})$/);
+  let ch=null, pr, od;
+  if(m){ ch=m[1]; pr=m[2]; od=m[3]; }
+  else {
+    m=raw.match(/^E-([AB-]{4})-(\d{8})$/);           // ältere Fassung ohne Aufgaben
+    if(!m) return false;
+    pr=m[1]; od=m[2];
+  }
+  const ids=FACTORS.map(f=>f.id);
+  const digits=od.split("").map(Number);
+  if(new Set(digits).size!==8 || digits.some(d=>d<1||d>8)) return false;
+  if(ch){
+    const qids=choiceQids();
+    ch.split("").forEach(function(c,i){
+      if(qids[i] && CHMAP[c]) S.choices[qids[i]]=CHMAP[c];
+    });
+  }
+  PAIRS.forEach((p,i)=>{const c=pr[i]; if(c==="A"||c==="B") S.pairs[p.id]=c.toLowerCase();});
+  S.order=digits.map(d=>ids[d-1]);
+  markSave(); renderRank(); renderGuide();
+  return true;
+}
+
+const FORM=[{"k": "W", "t": {"de": "Aufwärmen", "en": "Warm-up"}, "qs": [{"id": "W1", "q": {"de": "Welche Entscheidungen treffen Sie selbst, statt sie weiterzugeben?", "en": "Which decisions do you make yourself rather than passing on?"}, "key": false}, {"id": "W2", "q": {"de": "Welche Tools liefern Ihnen dabei Zahlen, Vorschläge oder fertige Texte — vom Dashboard bis ChatGPT?", "en": "Which tools give you numbers, suggestions or ready-written text — from dashboards to ChatGPT?"}, "key": false}]}, {"k": "A", "t": {"de": "Entscheidungslandkarte", "en": "Mapping the decision space"}, "qs": [{"id": "A1", "q": {"de": "Wo folgen Sie so einem Vorschlag fast immer — und wo fast nie?", "en": "Where do you follow such a suggestion almost always — and where almost never?"}, "key": false}, {"id": "A2", "q": {"de": "Was unterscheidet die beiden?", "en": "What is the difference between the two?"}, "key": false}, {"id": "A3", "q": {"de": "Bei hundert solchen Entscheidungen: Wie oft läge das Tool näher an der richtigen Antwort als Sie?", "en": "Out of a hundred such decisions: how often would the tool be closer to the right answer than you?"}, "key": true}, {"id": "A4", "q": {"de": "Gibt es Fälle, in denen die Zahlen gleich aussehen, die richtige Antwort aber trotzdem eine andere ist?", "en": "Are there cases where the numbers look the same but the right answer is still a different one?"}, "key": false}]}, {"k": "B", "t": {"de": "Fall 1 — der übergangene Vorschlag", "en": "Case 1 — the suggestion you did not follow"}, "qs": [{"id": "B1", "q": {"de": "Wann haben Sie zuletzt einen Vorschlag nicht übernommen? Fangen Sie bitte da an, wo Sie ihn zum ersten Mal gesehen haben.", "en": "When did you last not adopt a suggestion? Please start where you first saw it."}, "key": true}, {"id": "B1b", "q": {"de": "Woher kam dieser Vorschlag?", "en": "Where did that suggestion come from?"}, "key": false}, {"id": "B2", "q": {"de": "Was war zuerst da — Ihre eigene Einschätzung oder die des Tools?", "en": "Which came first, your own assessment or the tool's?"}, "key": false}, {"id": "B2b", "q": {"de": "Angenommen, ein Kollege fragt Sie, woher diese Zahl eigentlich kommt. Was antworten Sie ihm?", "en": "Suppose a colleague asks you where that number actually comes from. What do you tell them?"}, "key": true}, {"id": "B3", "q": {"de": "Was genau an dem Vorschlag hat Sie stutzig gemacht?", "en": "What exactly about the suggestion made you pause?"}, "key": false}, {"id": "B4", "q": {"de": "Woran haben Sie es gemerkt — an der Zahl, an der Begründung, oder an etwas, das das Tool nicht wissen konnte?", "en": "How did you notice — the number, the reasoning, or something the tool could not have known?"}, "key": false}, {"id": "B5", "q": {"de": "Dieselbe Empfehlung, dieselbe Begründung — aber sie kommt von einem erfahrenen Kollegen statt aus dem Tool. Hätten Sie anders reagiert?", "en": "The same recommendation, the same reasoning — but from an experienced colleague instead of the tool. Would you have reacted differently?"}, "key": true}, {"id": "B6", "q": {"de": "Haben Sie den Vorschlag ganz verworfen oder angepasst? Wo lag Ihr Wert?", "en": "Did you discard the suggestion entirely or adjust it? Where did your figure land?"}, "key": false}, {"id": "B7", "q": {"de": "Wer wusste von der Abweichung? Wer hätte widersprechen können?", "en": "Who knew about the deviation? Who could have objected?"}, "key": false}, {"id": "B8", "q": {"de": "Was hätte anders sein müssen, damit Sie dem Vorschlag gefolgt wären?", "en": "What would have had to be different for you to follow the suggestion?"}, "key": false}, {"id": "B9", "q": {"de": "Wissen Sie heute, ob Ihre Abweichung richtig war?", "en": "Do you know today whether your deviation was right?"}, "key": true}, {"id": "B10", "q": {"de": "Woran würden Sie es merken, wenn sie falsch gewesen wäre?", "en": "How would you have noticed if it had been wrong?"}, "key": false}]}, {"k": "C", "t": {"de": "Fall 2 — der befolgte Vorschlag", "en": "Case 2 — the suggestion you did follow"}, "qs": [{"id": "C1", "q": {"de": "Und umgekehrt: Wann sind Sie einem Vorschlag gefolgt, obwohl Sie es anders eingeschätzt hätten?", "en": "And the other way round: when did you follow a suggestion even though your own assessment differed?"}, "key": true}, {"id": "C2", "q": {"de": "Was hat den Ausschlag gegeben?", "en": "What tipped the balance?"}, "key": false}, {"id": "C3", "q": {"de": "Würden Sie heute noch einmal so entscheiden?", "en": "Would you decide the same way today?"}, "key": false}, {"id": "C4", "q": {"de": "Gab es eine Situation, in der es fachlich falsch gewesen wäre, dem Tool zu folgen?", "en": "Was there a situation where following the tool would have been professionally wrong?"}, "key": false}, {"id": "C5", "q": {"de": "Wann lag so ein Tool zuletzt klar daneben? Was haben Sie danach anders gemacht — und was nicht?", "en": "When was such a tool last clearly wrong? What did you do differently afterwards — and what not?"}, "key": false}, {"id": "C6", "q": {"de": "Prüfen Sie eine Zahl aus einem Dashboard anders als einen Text, den ChatGPT geschrieben hat?", "en": "Do you check a number from a dashboard differently from a text ChatGPT wrote?"}, "key": true}]}, {"k": "D", "t": {"de": "Rechenschaft & Normen", "en": "Accountability and norms"}, "qs": [{"id": "D1", "q": {"de": "Musste sich schon einmal jemand bei Ihnen — oder Sie sich bei jemandem — für eine Abweichung vom System erklären? Wie lief das Gespräch?", "en": "Has anyone had to explain a deviation to you, or you to them? How did that conversation go?"}, "key": false}, {"id": "D2", "q": {"de": "Zwei Entscheidungen gehen gleich schlecht aus — einmal sind Sie dem Tool gefolgt, einmal nicht. Welche erklärt sich in Ihrem Haus leichter?", "en": "Two decisions turn out equally badly — in one you followed the tool, in the other you did not. Which is easier to explain in your organisation?"}, "key": true}, {"id": "D3", "q": {"de": "Warum?", "en": "Why?"}, "key": false}, {"id": "D4", "q": {"de": "Was bleibt von so einer Abweichung schriftlich übrig? Wer liest das?", "en": "What remains of such a deviation in writing? Who reads it?"}, "key": false}, {"id": "D5", "q": {"de": "Wie würde ein Kollege jemanden beschreiben, der sich regelmäßig gegen den Vorschlag entscheidet?", "en": "How would a colleague describe someone who regularly decides against the suggestion?"}, "key": false}, {"id": "D6", "q": {"de": "Hat sich das in den letzten zwei Jahren verändert?", "en": "Has that changed over the past two years?"}, "key": false}]}, {"k": "Z", "t": {"de": "Abschluss", "en": "Closing"}, "qs": [{"id": "Z1", "q": {"de": "Was habe ich nicht gefragt, das ich hätte fragen sollen?", "en": "What did I not ask that I should have asked?"}, "key": false}, {"id": "Z2", "q": {"de": "Wen sollte ich sonst noch sprechen?", "en": "Who else should I speak to?"}, "key": false}]}];
+/* ═══ 0 · Tresor: Leitfaden entschlüsseln ══════════════════ */
+const bin=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function unlock(pw){
+  if(!(window.crypto && window.crypto.subtle)) return "nocrypto";
+  try{
+    const enc=new TextEncoder();
+    const base=await crypto.subtle.importKey("raw",enc.encode(pw),"PBKDF2",false,["deriveKey"]);
+    const key=await crypto.subtle.deriveKey(
+      {name:"PBKDF2",salt:bin(VAULT.salt),iterations:VAULT.it,hash:"SHA-256"},
+      base,{name:"AES-GCM",length:256},false,["decrypt"]);
+    const out=await crypto.subtle.decrypt({name:"AES-GCM",iv:bin(VAULT.iv)},key,bin(VAULT.ct));
+    BLOCKS=JSON.parse(new TextDecoder().decode(out));
+    return true;
+  }catch(_){ return false; }
+}
+
+/* ═══ 0b · Ansichtsumschaltung ═════════════════════════════ */
+let VIEW="part", unlocked=false;
+
+function showParticipant(){
+  VIEW="part";
+  document.getElementById("modWrap").hidden=true;
+  document.getElementById("lockWrap").hidden=true;
+  document.getElementById("partWrap").hidden=false;
+  document.getElementById("modChrome").style.display="none";
+  document.getElementById("modChrome2").style.display="none";
+  document.getElementById("switchBtn").textContent = unlocked
+    ? (lang==="de"?"Zur Moderation":"To moderation")
+    : "\u2022\u2022\u2022";
+  document.getElementById("switchBtn").title = unlocked ? "" : (lang==="de"?"Moderation entsperren":"Unlock moderation");
+  document.getElementById("modeLabel").textContent = lang==="de"?"Teilnahme":"Participant";
+  PV.render();
+}
+function showModerator(){
+  VIEW="mod";
+  document.getElementById("partWrap").hidden=true;
+  document.getElementById("lockWrap").hidden=true;
+  document.getElementById("modWrap").hidden=false;
+  document.getElementById("modChrome").style.display="inline-flex";
+  document.getElementById("modChrome2").style.display="inline-flex";
+  document.getElementById("switchBtn").textContent = lang==="de"?"Teilnehmeransicht":"Participant view";
+  document.getElementById("modeLabel").textContent = lang==="de"?"Moderation":"Moderation";
+  buildRail(); renderGuide(); renderRank(); renderData();
+}
+function showLock(){
+  VIEW="lock";
+  document.getElementById("partWrap").hidden=true;
+  document.getElementById("modWrap").hidden=true;
+  document.getElementById("lockWrap").hidden=false;
+  const w=document.getElementById("lockWrap"), de=lang==="de";
+  w.innerHTML='<div class="pstage" style="max-width:420px;padding-top:70px">'+
+    '<h1 style="font-size:24px">'+(de?"Moderation":"Moderation")+'</h1>'+
+    '<p class="lede">'+(de?"Der Leitfaden ist verschlüsselt in dieser Datei abgelegt und wird erst durch das Passwort lesbar."
+                          :"The guide is stored encrypted in this file and becomes readable only with the password.")+'</p>'+
+    '<input type="password" id="pw" style="width:100%;font-size:17px;padding:13px;border:1px solid var(--rule);border-radius:7px;background:var(--surface)" autocomplete="current-password">'+
+    '<div class="row" style="margin-top:12px;gap:10px">'+
+    '<button class="btn btn-primary" id="pwGo" style="flex:1;padding:12px">'+(de?"Entsperren":"Unlock")+'</button>'+
+    '<button class="btn btn-quiet" id="pwBack">'+(de?"Abbrechen":"Cancel")+'</button></div>'+
+    '<p id="pwErr" style="color:var(--over);font-size:13.5px;margin-top:12px;display:none">'+
+      (de?"Passwort stimmt nicht.":"Wrong password.")+'</p></div>';
+  const inp=w.querySelector("#pw"); inp.focus();
+  const go=async()=>{
+    const ok=await unlock(inp.value);
+    if(ok==="nocrypto"){
+      const e=w.querySelector("#pwErr");
+      e.textContent = de
+        ? "Die Entschlüsselung steht in diesem Fenster nicht zur Verfügung. Das passiert bei unverschlüsselten Verbindungen — bitte die Seite über https:// aufrufen oder die Datei direkt öffnen."
+        : "Decryption is unavailable in this window. This happens over insecure connections — open the page via https:// or open the file directly.";
+      e.style.display="block"; return;
+    }
+    if(!ok){ w.querySelector("#pwErr").style.display="block"; inp.select(); return; }
+    unlocked=true; showModerator();
+  };
+  w.querySelector("#pwGo").onclick=go;
+  w.querySelector("#pwBack").onclick=showParticipant;
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+}
+
+/* ═══ 0c · Teilnehmeransicht (eigenständig) ════════════════ */
+const PT={
+ de:{welcome:"Danke, dass Sie sich die Zeit nehmen",
+  scene:"Stellen Sie sich vor: Ein Bereich Ihres Hauses liegt seit zwei Quartalen leicht unter Plan. Es steht an, das Budget aufzustocken oder zu kürzen.",
+  ladderIntro:"Jetzt etwas anderes. Angenommen, ein System empfiehlt Ihnen eine Entscheidung — und es liegt in vergleichbaren Fällen häufiger richtig als Sie.",
+  pairIntro:"Zuletzt vier kurze Abwägungen. Es gibt keine richtigen Antworten.",
+  reason:"Warum? Ein Satz genügt.",
+  mirrorT:"Ihre Antworten im Vergleich",
+  forkQ:"Haben wir dazu bereits miteinander gesprochen?",
+  forkHint:"Das entscheidet nur, wie lang es wird.",
+  forkYes:"Ja, wir hatten ein Gespräch — nur noch die kurzen Aufgaben",
+  forkNo:"Nein, ich fülle alles selbst aus",
+  formHint:"Bitte in eigenen Worten, so knapp oder ausführlich Sie mögen. Sie können einzelne Fragen überspringen; die hervorgehobenen sind die wichtigsten.",
+  dlSelf:"Antworten als Datei sichern",
+  mail:"E-Mail öffnen",
+  mailHint:"Bitte die gesicherte Datei an die E-Mail anhängen. Wenn Sie uns schreiben, sehen wir natürlich Ihre Absenderadresse — sie wird nicht gespeichert und taucht in der Arbeit nicht auf.",
+  mailSubj:"Antworten zur Bachelorarbeit",
+  mailBody:"Guten Tag,\n\nanbei meine Antworten. Mein Ergebniscode lautet:",
+  mirrorL:"Nur als Rückmeldung für Sie. Spannungen zwischen einzelnen Antworten sind normal und völlig üblich — Menschen entscheiden im Einzelfall anders als im Überblick. Es gibt hier kein Richtig oder Falsch.",
+  intro:"Es geht um Empfehlungen, die Software Ihnen vorschlägt — eine Zahl auf einem Dashboard, eine Priorisierung, ein fertig formulierter Text. Manchmal folgt man ihnen, manchmal nicht.",
+  intro2:"Wie lange es dauert, hängt davon ab, ob wir bereits gesprochen haben — fünf Minuten oder etwa zwanzig. Es gibt keine richtigen Antworten; mich interessiert Ihre Gewichtung.",
+  privacy:"Es werden keine Namen, keine Firmennamen und keine E-Mail-Adressen erfasst. Am Ende erhalten Sie einen kurzen Code, den Sie zurückschicken — mehr verlässt dieses Fenster nicht.",
+  begin:"Beginnen",haveCode:"Ich habe einen Raumcode",codeTitle:"Raumcode",
+  codeHint:"Die vier Buchstaben, die Ihnen gerade genannt wurden.",codeGo:"Verbinden",
+  codeBad:"Diesen Code gibt es nicht. Bitte prüfen.",codeBack:"Ohne Code fortfahren",
+  pairQ:"Was wiegt für Sie schwerer?",sortQ:"Und jetzt die Reihenfolge",
+  sortHint:"Ganz oben steht, was für Ihre Entscheidung am wichtigsten ist. Pfeile benutzen oder Karten ziehen. Die obersten drei zählen.",
+  whyQ:"Warum steht Ihr erster Platz ganz oben?",whyHint:"Ein Satz genügt. Sie können das Feld auch leer lassen.",
+  missQ:"Fehlt etwas?",missHint:"Falls für Sie ein Faktor wichtig ist, der oben nicht vorkommt — hier gern nennen. Optional.",
+  back:"Zurück",next:"Weiter",send:"Fertig",doneTitle:"Das war alles. Vielen Dank.",
+  doneLive:"Ihre Antworten sind angekommen. Sie können das Fenster jetzt schließen.",
+  doneCode:"Bitte schicken Sie diesen Code zurück — per Mail oder Nachricht, wie es Ihnen lieber ist.",
+  copy:"Code kopieren",copied:"Kopiert",dl:"Stattdessen als Datei sichern",
+  extra:"Bitte diesen Text mitschicken — er steckt nicht im Code:"},
+ en:{welcome:"Thank you for taking the time",
+  scene:"Imagine: a unit in your organisation has been slightly below plan for two quarters. A decision is due — increase the budget or cut it.",
+  ladderIntro:"Now something different. Suppose a system recommends a decision to you — and in comparable cases it is right more often than you are.",
+  pairIntro:"Finally, four quick trade-offs. There are no right answers.",
+  reason:"Why? One sentence is enough.",
+  mirrorT:"Your answers side by side",
+  forkQ:"Have we already spoken about this?",
+  forkHint:"This only decides how long it takes.",
+  forkYes:"Yes, we had a conversation — just the short exercises",
+  forkNo:"No, I am filling everything in myself",
+  formHint:"In your own words, as brief or as full as you like. You may skip questions; the highlighted ones matter most.",
+  dlSelf:"Save answers as a file",
+  mail:"Open email",
+  mailHint:"Please attach the saved file to the email. If you write to us we will of course see your sender address — it is not stored and does not appear in the thesis.",
+  mailSubj:"Answers for the bachelor thesis",
+  mailBody:"Hello,\n\nplease find my answers attached. My result code is:",
+  mirrorL:"Just as feedback for you. Tension between individual answers is normal and very common — people decide differently case by case than in overview. There is no right or wrong here.",
+  intro:"This is about recommendations that software puts in front of you — a number on a dashboard, a ranking, a ready-written text. Sometimes you follow them, sometimes you don't.",
+  intro2:"How long it takes depends on whether we have already spoken — five minutes, or around twenty. There are no right answers; what matters is how you weigh things.",
+  privacy:"No names, no employers and no email addresses are collected. At the end you get a short code to send back — nothing else leaves this window.",
+  begin:"Begin",haveCode:"I have a room code",codeTitle:"Room code",
+  codeHint:"The four letters you were just given.",codeGo:"Connect",
+  codeBad:"No such code. Please check.",codeBack:"Continue without a code",
+  pairQ:"Which weighs more for you?",sortQ:"Now the order",
+  sortHint:"Put what matters most to your decision at the top. Use the arrows or drag the cards. The top three count.",
+  whyQ:"Why is your first place at the top?",whyHint:"One sentence is enough. You may leave this empty.",
+  missQ:"Anything missing?",missHint:"If a factor matters to you that does not appear above, name it here. Optional.",
+  back:"Back",next:"Next",send:"Done",doneTitle:"That was everything. Thank you.",
+  doneLive:"Your answers have arrived. You can close this window now.",
+  doneCode:"Please send this code back — by email or message, whichever suits you.",
+  copy:"Copy code",copied:"Copied",dl:"Save as a file instead",
+  extra:"Please send this text along too — it is not part of the code:"}
+};
+
+const PQ=[
+ {id:"V1",scene:true,
+  q:{de:"Ein Analysesystem empfiehlt, das Budget um 15 % zu kürzen. Was tun Sie?",
+     en:"An analytics system recommends cutting the budget by 15 %. What do you do?"},
+  opts:[{id:"follow",de:"Übernehmen",en:"Adopt"},
+        {id:"adjust",de:"Anpassen",en:"Adjust"},
+        {id:"reject",de:"Nicht übernehmen",en:"Do not adopt"}]},
+ {id:"V2",
+  q:{de:"Dieselbe Empfehlung, dieselben 15 %, mit derselben Begründung — sie kommt aber von einer Kollegin mit fünfzehn Jahren Erfahrung in diesem Bereich. Was tun Sie?",
+     en:"The identical recommendation, the same 15 %, with the same reasoning — but it comes from a colleague with fifteen years in this area. What do you do?"},
+  opts:[{id:"follow",de:"Übernehmen",en:"Adopt"},
+        {id:"adjust",de:"Anpassen",en:"Adjust"},
+        {id:"reject",de:"Nicht übernehmen",en:"Do not adopt"}]},
+ {id:"V3",
+  q:{de:"Jetzt empfiehlt das System zu kürzen, die Kollegin empfiehlt aufzustocken. Wem folgen Sie?",
+     en:"Now the system recommends cutting and the colleague recommends increasing. Whom do you follow?"},
+  opts:[{id:"system",de:"Dem System",en:"The system"},
+        {id:"human",de:"Der Kollegin",en:"The colleague"},
+        {id:"own",de:"Weder noch — eigener Weg",en:"Neither — my own way"}]},
+ {id:"L1",ladder:true,
+  q:{de:"Ab welcher dieser Entscheidungen würden Sie einen Systemvorschlag nicht mehr ungeprüft übernehmen?",
+     en:"At which of these decisions would you stop adopting a system's suggestion unchecked?"},
+  opts:[{id:"a",de:"Die Reihenfolge von drei Aufgaben in dieser Woche",en:"The order of three tasks this week"},
+        {id:"b",de:"50 000 € Budget",en:"€50,000 of budget"},
+        {id:"c",de:"Welcher von zwei Standorten geschlossen wird",en:"Which of two sites is closed"},
+        {id:"d",de:"Wer von zwei Personen das Team verlässt",en:"Which of two people leaves the team"},
+        {id:"none",de:"Bei keiner davon",en:"At none of them"}]}
+];
+
+const PV=(()=>{
+  const A={mode:"",answers:{},choices:{},reasons:{},pairs:{},order:FACTORS.map(f=>f.id),why:"",missing:""};
+  let step=-2, roomCode="", pid="", joined=0;
+  const MAILTO="dblumin@student.hult.edu";
+  function SCR(){
+    const out=[];
+    if(A.mode==="self") FORM.forEach(function(b){ out.push({t:"form",b:b}); });
+    PQ.forEach(function(q){ out.push({t:"choice",q:q}); });
+    PAIRS.forEach(function(p){ out.push({t:"pair",p:p}); });
+    out.push({t:"sort"}); out.push({t:"free"});
+    return out;
+  }
+  const t=()=>PT[lang];
+  const CH="follow:F,adjust:A,reject:R,system:S,human:H,own:O,a:1,b:2,c:3,d:4,none:0"
+    .split(",").reduce((m,x)=>{const p=x.split(":");m[p[0]]=p[1];return m},{});
+
+  function code(){
+    const c=PQ.map(x=>CH[A.choices[x.id]]||"-").join("");
+    const p=PAIRS.map(x=>(A.pairs[x.id]||"-").toUpperCase()).join("");
+    const o=A.order.map(id=>FACTORS.findIndex(f=>f.id===id)+1).join("");
+    return "E-"+c+"-"+p+"-"+o;
+  }
+  function freeText(){
+    const out=[];
+    PQ.forEach(x=>{ if((A.reasons[x.id]||"").trim()) out.push(x.id+": "+A.reasons[x.id].trim()); });
+    if(A.why.trim()) out.push((lang==="de"?"Platz 1: ":"First place: ")+A.why.trim());
+    if(A.missing.trim()) out.push((lang==="de"?"Fehlt: ":"Missing: ")+A.missing.trim());
+    return out.join("\n");
+  }
+  async function push(done){
+    if(!roomCode) return;
+    try{
+      await DB.set("ttm:room:"+roomCode+":p:"+pid,
+        {pid,joinedAt:joined,mode:A.mode,answers:A.answers,choices:A.choices,reasons:A.reasons,pairs:A.pairs,order:A.order,
+         why:A.why,missing:A.missing,done:!!done,at:Date.now()},true);
+    }catch(_){}
+  }
+  const TOTAL=()=>SCR().length;
+  function dots(n){
+    let h='<div class="dots">';
+    for(let i=0;i<TOTAL();i++) h+='<span class="pdot '+(i<n?"on":i===n?"now":"")+'"></span>';
+    return h+'</div>';
+  }
+  function mv(id,d){
+    const i=A.order.indexOf(id), j=i+d;
+    if(j<0||j>=A.order.length) return;
+    const x=A.order[i]; A.order[i]=A.order[j]; A.order[j]=x; push(false);
+  }
+  const navRow=(backDisabled,nextDisabled,nextLabel,id2)=>
+    '<div class="row" style="margin-top:24px;justify-content:space-between">'+
+    '<button class="btn btn-quiet" id="bk"'+(backDisabled?" disabled":"")+'>\u2190 '+t().back+'</button>'+
+    '<button class="btn btn-primary" id="'+(id2||"nx")+'"'+(nextDisabled?" disabled":"")+
+    ' style="padding:12px 22px">'+nextLabel+'</button></div>';
+
+  function render(){
+    const s=document.getElementById("partWrap"), T2=t();
+
+    if(step===-2){
+      s.innerHTML='<div class="pstage">'+
+        '<h1 style="font-size:27px">'+T2.welcome+'</h1>'+
+        '<p style="color:var(--ink)">'+T2.intro+'</p><p class="lede">'+T2.intro2+'</p>'+
+        '<div style="border-left:3px solid var(--rule);padding:2px 0 2px 13px;font-size:14px;color:var(--muted);margin:0 0 22px">'+T2.privacy+'</div>'+
+        '<button class="btn btn-primary" id="go" style="width:100%;padding:15px;font-size:16px">'+T2.begin+'</button>'+
+        '<div class="row" style="margin-top:12px;justify-content:center">'+
+        '<button class="btn btn-quiet" id="hasCode">'+T2.haveCode+'</button></div></div>';
+      s.querySelector("#go").onclick=()=>{step=-3;render()};
+      s.querySelector("#hasCode").onclick=()=>{step=-1;render()};
+      return;
+    }
+
+    if(step===-3){
+      s.innerHTML='<div class="pstage"><h2 style="font-size:21px">'+T2.forkQ+'</h2>'+
+        '<p class="lede">'+T2.forkHint+'</p>'+
+        '<button class="opt" id="fInt">'+T2.forkYes+'</button>'+
+        '<button class="opt" id="fSelf">'+T2.forkNo+'</button>'+
+        '<div class="row" style="margin-top:16px"><button class="btn btn-quiet" id="bk">\u2190 '+T2.back+'</button></div></div>';
+      s.querySelector("#fInt").onclick=()=>{A.mode="interview";step=0;render()};
+      s.querySelector("#fSelf").onclick=()=>{A.mode="self";step=0;render()};
+      s.querySelector("#bk").onclick=()=>{step=-2;render()};
+      return;
+    }
+    if(step===-1){
+      s.innerHTML='<div class="pstage"><h2 style="font-size:21px">'+T2.codeTitle+'</h2>'+
+        '<p class="lede">'+T2.codeHint+'</p>'+
+        '<input class="bigcode" id="cin" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false">'+
+        '<button class="btn btn-primary" id="cgo" style="width:100%;margin-top:12px;padding:14px">'+T2.codeGo+'</button>'+
+        '<div class="row" style="margin-top:12px;justify-content:center">'+
+        '<button class="btn btn-quiet" id="cskip">'+T2.codeBack+'</button></div></div>';
+      const i=s.querySelector("#cin"); i.focus();
+      const go=async()=>{
+        const c=(i.value||"").trim().toUpperCase();
+        if(c.length!==4||!DB.canRoom){ toast(T2.codeBad); return; }
+        const meta=await DB.get("ttm:room:"+c,true);
+        if(!meta){ toast(T2.codeBad); return; }
+        roomCode=c; joined=Date.now(); A.mode="interview";
+        pid=Array.from({length:5},()=>ALPHA[Math.floor(Math.random()*ALPHA.length)]).join("");
+        await push(false); step=0; render();
+      };
+      s.querySelector("#cgo").onclick=go;
+      i.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
+      s.querySelector("#cskip").onclick=()=>{step=-3;render()};
+      return;
+    }
+
+    const scr=SCR(), cur=scr[step];
+
+    /* Schriftliche Fragen */
+    if(cur && cur.t==="form"){
+      const b=cur.b;
+      s.innerHTML='<div class="pstage">'+dots(step)+
+        '<p class="eyebrow">'+esc(b.t[lang])+'</p>'+
+        '<p class="lede" style="margin-top:6px">'+T2.formHint+'</p>'+
+        b.qs.map(function(q){
+          return '<div style="margin-bottom:20px"><p style="font-size:16.5px;line-height:1.4;margin:0 0 7px;color:var(--ink)'+
+            (q.key?';font-weight:560':'')+'">'+esc(q.q[lang])+'</p>'+
+            '<textarea class="note" data-a="'+q.id+'" style="width:100%;min-height:70px;font-size:16px">'+
+            esc(A.answers[q.id]||"")+'</textarea></div>';
+        }).join("")+
+        navRow(false,false,T2.next+' \u2192')+'</div>';
+      s.querySelectorAll("[data-a]").forEach(function(t){
+        t.addEventListener("input",function(e){A.answers[e.target.dataset.a]=e.target.value});
+      });
+      s.querySelector("#bk").onclick=()=>{step--;render()};
+      s.querySelector("#nx").onclick=()=>{push(false);step++;render()};
+      return;
+    }
+
+    /* Vignette und Leiter */
+    if(cur && cur.t==="choice"){
+      const q=cur.q, chosen=A.choices[q.id];
+      s.innerHTML='<div class="pstage">'+dots(step)+
+        (q.scene?'<div class="scene">'+T2.scene+'</div>':'')+
+        (q.ladder?'<div class="scene">'+T2.ladderIntro+'</div>':'')+
+        '<h2 style="font-size:21px;margin-bottom:18px">'+esc(q.q[lang])+'</h2>'+
+        q.opts.map(o=>'<button class="opt" data-o="'+o.id+'" aria-pressed="'+(chosen===o.id)+'">'+esc(o[lang])+'</button>').join("")+
+        '<div style="margin-top:18px"><p class="lede" style="margin-bottom:8px">'+T2.reason+'</p>'+
+        '<textarea class="note" id="rsn" style="width:100%;min-height:62px;font-size:16px">'+esc(A.reasons[q.id]||"")+'</textarea></div>'+
+        navRow(step===0,!chosen,T2.next+' \u2192')+'</div>';
+      s.querySelectorAll(".opt").forEach(b=>b.onclick=async()=>{A.choices[q.id]=b.dataset.o;await push(false);render()});
+      s.querySelector("#rsn").addEventListener("input",e=>{A.reasons[q.id]=e.target.value});
+      s.querySelector("#bk").onclick=()=>{step--;render()};
+      s.querySelector("#nx").onclick=()=>{push(false);step++;render()};
+      return;
+    }
+
+    /* Paarvergleiche */
+    if(cur && cur.t==="pair"){
+      const p=cur.p, first=scr.findIndex(function(x){return x.t==="pair"})===step;
+      s.innerHTML='<div class="pstage">'+dots(step)+
+        (first?'<div class="scene">'+T2.pairIntro+'</div>':'')+
+        '<h2 style="font-size:21px;margin-bottom:18px">'+T2.pairQ+'</h2>'+
+        '<button class="opt" data-c="a" aria-pressed="'+(A.pairs[p.id]==="a")+'">'+esc(F(p.a))+'</button>'+
+        '<button class="opt" data-c="b" aria-pressed="'+(A.pairs[p.id]==="b")+'">'+esc(F(p.b))+'</button>'+
+        navRow(false,!A.pairs[p.id],T2.next+' \u2192')+'</div>';
+      s.querySelectorAll(".opt").forEach(b=>b.onclick=async()=>{A.pairs[p.id]=b.dataset.c;await push(false);render()});
+      s.querySelector("#bk").onclick=()=>{step--;render()};
+      s.querySelector("#nx").onclick=()=>{step++;render()};
+      return;
+    }
+
+    /* Sortieren */
+    if(cur && cur.t==="sort"){
+      s.innerHTML='<div class="pstage">'+dots(step)+
+        '<h2 style="font-size:21px">'+T2.sortQ+'</h2><p class="lede">'+T2.sortHint+'</p>'+
+        '<ul class="cards" id="pcards"></ul>'+navRow(false,false,T2.next+' \u2192')+'</div>';
+      const ul=s.querySelector("#pcards");
+      const draw=()=>{
+        ul.innerHTML=A.order.map((id,i)=>
+          '<li class="card'+(i<3?" top3":"")+'" draggable="true" data-id="'+id+'">'+
+          '<span class="rank">'+(i+1)+'</span><span class="card-label">'+esc(F(id))+'</span>'+
+          '<button class="move" data-up="'+id+'">\u2191</button>'+
+          '<button class="move" data-dn="'+id+'">\u2193</button></li>').join("");
+        ul.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{mv(b.dataset.up,-1);draw()});
+        ul.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>{mv(b.dataset.dn,1);draw()});
+        wireDrag(ul,A,()=>{push(false);draw()});
+      };
+      draw();
+      s.querySelector("#bk").onclick=()=>{step--;render()};
+      s.querySelector("#nx").onclick=()=>{step++;render()};
+      return;
+    }
+
+    /* Freitext */
+    if(cur && cur.t==="free"){
+      s.innerHTML='<div class="pstage">'+dots(step)+
+        '<h2 style="font-size:21px">'+T2.whyQ+'</h2><p class="lede">'+T2.whyHint+'</p>'+
+        '<textarea class="note" id="why" style="width:100%;min-height:88px;font-size:16px">'+esc(A.why)+'</textarea>'+
+        '<h2 style="font-size:21px;margin-top:26px">'+T2.missQ+'</h2><p class="lede">'+T2.missHint+'</p>'+
+        '<textarea class="note" id="miss" style="width:100%;min-height:64px;font-size:16px">'+esc(A.missing)+'</textarea>'+
+        navRow(false,false,T2.send,"fin")+'</div>';
+      s.querySelector("#why").addEventListener("input",e=>{A.why=e.target.value});
+      s.querySelector("#miss").addEventListener("input",e=>{A.missing=e.target.value});
+      s.querySelector("#bk").onclick=()=>{step--;render()};
+      s.querySelector("#fin").onclick=async()=>{await push(true);step=999;render()};
+      return;
+    }
+
+    /* Fertig */
+    if(roomCode){
+      const mir=analyseHtml({choices:A.choices,pairs:A.pairs,order:A.order},false);
+      s.innerHTML='<div class="pstage" style="padding-top:40px">'+
+        '<h1 style="font-size:26px">'+T2.doneTitle+'</h1><p class="lede">'+T2.doneLive+'</p>'+
+        (mir?'<h2 style="font-size:19px;margin:26px 0 4px">'+T2.mirrorT+'</h2><p class="lede">'+T2.mirrorL+'</p>'+mir:'')+'</div>';
+      return;
+    }
+    const c=code(), ft=freeText();
+    const mirror=analyseHtml({choices:A.choices,pairs:A.pairs,order:A.order},false);
+    s.innerHTML='<div class="pstage"><h1 style="font-size:26px;margin-top:20px">'+T2.doneTitle+'</h1>'+
+      (mirror?'<h2 style="font-size:19px;margin:22px 0 4px">'+T2.mirrorT+'</h2>'+
+              '<p class="lede">'+T2.mirrorL+'</p>'+mirror:'')+
+      '<p class="lede">'+T2.doneCode+'</p>'+
+      '<div id="res" style="font-family:var(--mono);font-size:clamp(17px,4.6vw,25px);font-weight:700;letter-spacing:.06em;color:var(--signal);background:var(--soft);border-radius:8px;padding:20px 14px;text-align:center;word-break:break-all;margin:0 0 14px">'+c+'</div>'+
+      (ft?'<p class="lede" style="margin-bottom:8px">'+T2.extra+'</p>'+
+          '<pre style="white-space:pre-wrap;font-family:var(--sans);font-size:14.5px;background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:13px;margin:0 0 14px">'+esc(ft)+'</pre>':'')+
+      (A.mode==="self"
+        ? '<div class="row"><button class="btn btn-primary" id="dl">'+T2.dlSelf+'</button>'+
+          '<button class="btn" id="mail">'+T2.mail+'</button></div>'+
+          '<p class="lede" style="margin-top:14px">'+T2.mailHint+'</p></div>'
+        : '<div class="row"><button class="btn btn-primary" id="cp">'+T2.copy+'</button>'+
+          '<button class="btn btn-quiet" id="dl">'+T2.dl+'</button></div></div>');
+    const mb=s.querySelector("#mail");
+    if(mb) mb.onclick=()=>{
+      location.href="mailto:"+MAILTO+"?subject="+encodeURIComponent(T2.mailSubj)+
+        "&body="+encodeURIComponent(T2.mailBody+"\n\n"+c);
+    };
+    const cpb=s.querySelector("#cp");
+    if(cpb) cpb.onclick=async()=>{
+      try{ await navigator.clipboard.writeText(ft?c+"\n\n"+ft:c); toast(T2.copied); }catch(_){ toast(T2.copied); }
+    };
+    s.querySelector("#dl").onclick=()=>{
+      download("abwaegung.json",JSON.stringify(
+        {tool:"to-trust-the-machine/participant",mode:A.mode,code:c,answers:A.answers,choices:A.choices,reasons:A.reasons,
+         pairs:A.pairs,order:A.order,top3:A.order.slice(0,3),why:A.why,missing:A.missing,
+         at:new Date().toISOString()},null,2),"application/json");
+    };
+  }
+  return {render};
+})();
+
+/* ═══ 10 · Verdrahtung ═════════════════════════════════════ */
+function setView(name){
+  $$(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.view===name)));
+  ["session","room","rank","transcript","data"].forEach(v=>$("#view-"+v).hidden=(v!==name));
+  document.querySelector(".gutter").style.visibility = name==="session"?"visible":"hidden";
+  if(name==="room") renderRoom();
+  if(name==="rank") renderRank();
+  if(name==="transcript") renderTranscript();
+  if(name==="data") renderData();
+}
+$$(".tab").forEach(t=>t.onclick=()=>setView(t.dataset.view));
+
+$("#toggleTimer").onclick=()=>{
+  running=!running;
+  $("#toggleTimer").textContent=running?T().pause:T().start;
+  if(running) tickRef=setInterval(()=>{elapsed+=1000;paintClock();paintPlayhead()},1000);
+  else { clearInterval(tickRef); markSave(); }
+  paintClock();
+};
+$("#resetTimer").onclick=()=>{running=false;clearInterval(tickRef);elapsed=0;
+  $("#toggleTimer").textContent=T().start;paintClock();paintPlayhead()};
+$("#pcode").oninput=e=>{S.code=(e.target.value.trim().toUpperCase())||"I1";markSave()};
+$("#anchorNote").addEventListener("input",e=>{S.anchor=e.target.value;markSave()});
+$("#switchBtn").onclick=()=>{ VIEW==="mod" ? showParticipant() : (unlocked?showModerator():showLock()); };
+
+$("#langBtn").onclick=()=>{
+  lang = lang==="de" ? "en" : "de";
+  $("#langBtn").textContent = lang==="de" ? "EN" : "DE";
+  $("#toggleTimer").textContent = running ? T().pause : T().start;
+  $("#resetTimer").textContent = T().reset;
+  $("#footNote").textContent = T().foot;
+  if(VIEW==="part"){ showParticipant(); return; }
+  if(VIEW==="lock"){ showLock(); return; }
+  if(!$("#view-room").hidden) renderRoom();
+  if(!$("#view-data").hidden) renderData();
+  showModerator();
+  setSaveState(DB.kind==="memory"?"off":"on");
+};
+
+window.addEventListener("beforeunload",e=>{
+  if(DB.kind==="memory"){
+    const any=Object.keys(S.notes).some(k=>S.notes[k]&&S.notes[k].trim());
+    if(any){ e.preventDefault(); e.returnValue=""; }
+  }
+});
+
+$("#footNote").textContent=UI.de.foot;
+showParticipant();
+setSaveState(DB.kind==="memory"?"off":"on");
+
+</script>
